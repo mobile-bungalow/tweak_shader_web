@@ -15,6 +15,4 @@ body {
     color: var(--text-color);
     font-family: 'Roboto Mono', monospace, sans-serif;
     line-height: 1.6;
-    min-height: 100vh;
-    padding: 1rem;
 }
