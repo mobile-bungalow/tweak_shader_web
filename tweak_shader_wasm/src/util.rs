@@ -1,5 +1,5 @@
 use tweak_shader::wgpu::{self, Device, Instance, Queue, Surface};
-use wasm_bindgen::{JsError, JsValue, prelude::*};
+use wasm_bindgen::prelude::*;
 use web_sys::HtmlCanvasElement;
 
 use crate::external::log;

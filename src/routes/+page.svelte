@@ -22,7 +22,7 @@
             <canvas width="800" height="450" bind:this={canvas}></canvas>
             <div class="inputs"></div>
         </div>
-        <CodeMirror lang={glsl()}></CodeMirror>
+        <CodeMirror value={DEFAULT_SHADER} lang={glsl()}></CodeMirror>
     </div>
 </main>
 
