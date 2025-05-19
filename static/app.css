@@ -1,0 +1,20 @@
+:root {
+    --bg-color: #1a1a1a;
+    --text-color: #f0f0f0;
+    --accent-color: #00a4db;
+    --secondary-color: #8c42ab;
+    --border-color: #333333;
+    --editor-bg: #2d2d2d;
+    --editor-text: #d4d4d4;
+    --success-color: #4caf50;
+    --error-color: #f44336;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Roboto Mono', monospace, sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 1rem;
+}
