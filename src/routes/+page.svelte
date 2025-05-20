@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { DEFAULT_SHADER, theme } from "$lib";
+    import { DEFAULT_SHADER, inputValueToProps, theme } from "$lib";
     import init, {
         TweakShader,
         WgpuContext,
@@ -9,7 +9,8 @@
     import CodeMirror from "svelte-codemirror-editor";
     import { vim } from "@replit/codemirror-vim";
     import { glsl } from "codemirror-lang-glsl";
-    import Input from "../components/input.svelte";
+    import Input from "../components/Input.svelte";
+    import ImageInput from "../components/Image.svelte";
 
     let inputs: Map<String, any> = new Map();
     let canvas: HTMLCanvasElement;
@@ -105,8 +106,7 @@
                 {#each Array.from(inputs) as [k, v]}
                     <Input
                         label={k.toString()}
-                        type={v.type}
-                        bind:value={v.current}
+                        input={v}
                         change={(val) => {
                             tweakShader.set_input(k.toString(), val);
                         }}
@@ -125,6 +125,7 @@
                         lang={glsl()}
                     ></CodeMirror>
                 </div>
+                <div class="button-row"></div>
                 <button onclick={recompile} aria-label="recompile"
                     >Recompile</button
                 >
@@ -132,6 +133,28 @@
                 <button onclick={toggleVim} aria-label="vimKeybinds"
                     >Vim Mode</button
                 >
+                <div class="image-inputs">
+                    {#each Array.from(inputs) as [k, v]}
+                        {#if v.type == "Image"}
+                            <p>{k}</p>
+                            <ImageInput
+                                {...inputValueToProps(v)}
+                                change={(val) => {
+                                    if (val != undefined) {
+                                        tweakShader.load_texture(
+                                            k.toString(),
+                                            val,
+                                        );
+                                    } else {
+                                        tweakShader.remove_texture(
+                                            k.toString(),
+                                        );
+                                    }
+                                }}
+                            ></ImageInput>
+                        {/if}
+                    {/each}
+                </div>
             </div>
             <div class="texturePreviews"></div>
         </div>
