@@ -30,7 +30,7 @@ pub async fn initialize_library() -> WgpuContext {
 impl TweakShader {
     /// Create a new TweakShader instance with a shader source and output format
     #[wasm_bindgen(constructor)]
-    pub fn new(shader_source: String, ctx: WgpuContext) -> Result<TweakShader, JsError> {
+    pub fn new(shader_source: String, ctx: &WgpuContext) -> Result<TweakShader, JsError> {
         let WgpuContext {
             device,
             queue,
@@ -45,11 +45,21 @@ impl TweakShader {
                 &device,
                 &queue,
             )?,
-            device,
-            queue,
-            instance,
+            device: device.clone(),
+            queue: queue.clone(),
+            instance: instance.clone(),
             surface_map: Default::default(),
         })
+    }
+
+    pub fn update_src(&mut self, shader_source: &str) -> Result<(), JsError> {
+        self.context = RenderContext::new(
+            shader_source,
+            wgpu::TextureFormat::Rgba8Unorm,
+            &self.device,
+            &self.queue,
+        )?;
+        Ok(())
     }
 
     /// Check if the loaded shader is a compute shader
