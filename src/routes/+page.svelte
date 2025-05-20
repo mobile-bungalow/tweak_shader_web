@@ -63,6 +63,10 @@
         start = Date.now();
         tweakShader.update_src(src);
         inputs = tweakShader.get_input_list();
+        inputs.forEach((v, k) => {
+            console.log(v, k);
+            tweakShader.set_input(k.toString(), v.current);
+        });
         draw();
     };
 
@@ -99,7 +103,8 @@
             <div class="controls">
                 <div class="stats"></div>
                 <button onclick={togglePause} aria-label="pause">Pause</button>
-                <button aria-label="ar">Aspect</button>
+                <button aria-label="aspect ratio">Aspect</button>
+                <button aria-label="select target">Target</button>
                 <div class="outputSelector"></div>
             </div>
             <div class="inputs">

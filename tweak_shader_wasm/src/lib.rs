@@ -52,13 +52,19 @@ impl TweakShader {
         })
     }
 
-    pub fn update_src(&mut self, shader_source: &str) -> Result<(), JsError> {
-        self.context = RenderContext::new(
+    pub fn update_src(
+        &mut self,
+        shader_source: &str,
+        wgpu_context: &WgpuContext,
+    ) -> Result<(), JsError> {
+        let mut new_ctx = RenderContext::new(
             shader_source,
             wgpu::TextureFormat::Rgba8Unorm,
             &self.device,
             &self.queue,
         )?;
+        new_ctx.copy_resources_into(&mut self.context, &wgpu_context.device, &wgpu_context.queue);
+        self.context = new_ctx;
         Ok(())
     }
 
