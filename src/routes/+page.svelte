@@ -9,7 +9,9 @@
     import CodeMirror from "svelte-codemirror-editor";
     import { vim } from "@replit/codemirror-vim";
     import { glsl } from "codemirror-lang-glsl";
+    import Input from "../components/input.svelte";
 
+    let inputs: Map<String, any> = new Map();
     let canvas: HTMLCanvasElement;
     let tweakShader: TweakShader;
     let src = DEFAULT_SHADER;
@@ -21,6 +23,7 @@
         await init();
         context = await initialize_library();
         tweakShader = new TweakShader(src, context);
+        inputs = tweakShader.get_input_list();
 
         canvas.width = 800;
         canvas.height = 450;
@@ -28,6 +31,7 @@
     });
 
     let last = Date.now();
+
     const draw = () => {
         // collect inputs and call tweakShader.set_input(...)
         // update time and date
@@ -51,8 +55,8 @@
     const recompile = () => {
         frameCount = 0;
         start = Date.now();
-        console.log(src, context);
         tweakShader.update_src(src);
+        inputs = tweakShader.get_input_list();
         draw();
     };
 
@@ -73,7 +77,7 @@
 
 <main>
     <div class="container">
-        <div class="leftColumn">
+        <div class="left-column">
             <canvas bind:this={canvas}></canvas>
             <div class="controls">
                 <div class="stats"></div>
@@ -81,9 +85,20 @@
                 <button aria-label="ar">Aspect</button>
                 <div class="outputSelector"></div>
             </div>
-            <div class="inputs"></div>
+            <div class="inputs">
+                {#each Array.from(inputs) as [k, v]}
+                    <Input
+                        label={k.toString()}
+                        type={v.type}
+                        bind:value={v.current}
+                        change={(val) => {
+                            tweakShader.set_input(k.toString(), val);
+                        }}
+                    ></Input>
+                {/each}
+            </div>
         </div>
-        <div class="rightColumn">
+        <div class="right-column">
             <div class="editor">
                 <div class="code-editor-wrapper">
                     <CodeMirror
@@ -137,12 +152,12 @@
         height: auto;
     }
 
-    .leftColumn,
-    .rightColumn {
+    .left-column,
+    .right-column {
         padding: 1rem;
     }
 
-    .rightColumn {
+    .right-column {
         flex: 1;
     }
 </style>
