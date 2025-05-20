@@ -33,17 +33,22 @@
     let last = Date.now();
 
     const draw = () => {
-        // collect inputs and call tweakShader.set_input(...)
-        // update time and date
         frameCount += 1;
         const time = Date.now();
         const elapsed = time - start;
         const delta = last - time;
         last = Date.now();
-        // update mouse
+        let now = new Date();
+
         tweakShader.update_resolution(canvas.width, canvas.height);
         tweakShader.update_frame_count(frameCount);
         tweakShader.update_time(elapsed / 1000.0);
+        tweakShader.update_datetime(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDay(),
+            now.getSeconds(),
+        );
         tweakShader.update_delta(delta / 1000.0);
         tweakShader.render(canvas);
 
@@ -78,7 +83,18 @@
 <main>
     <div class="container">
         <div class="left-column">
-            <canvas bind:this={canvas}></canvas>
+            <canvas
+                bind:this={canvas}
+                onmouseup={() => {
+                    tweakShader.set_mouse_up();
+                }}
+                onmousedown={() => {
+                    tweakShader.set_mouse_down();
+                }}
+                onmousemove={(ev) => {
+                    tweakShader.set_mouse_position(ev.clientX, ev.clientY);
+                }}
+            ></canvas>
             <div class="controls">
                 <div class="stats"></div>
                 <button onclick={togglePause} aria-label="pause">Pause</button>
