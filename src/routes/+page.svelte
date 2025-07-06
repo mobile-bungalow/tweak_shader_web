@@ -61,13 +61,22 @@
     const recompile = () => {
         frameCount = 0;
         start = Date.now();
-        tweakShader.update_src(src);
+        try {
+            tweakShader.update_src(src, context);
+            updateCompilationDiagnostic();
+        } catch (e) {
+            console.error(e);
+            updateCompilationDiagnostic(e);
+        }
         inputs = tweakShader.get_input_list();
-        inputs.forEach((v, k) => {
-            console.log(v, k);
-            tweakShader.set_input(k.toString(), v.current);
-        });
         draw();
+    };
+
+    let error = undefined;
+    const updateCompilationDiagnostic = (e?: any) => {
+        error = e;
+        if (error != undefined) {
+        }
     };
 
     let paused = false;

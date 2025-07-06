@@ -63,7 +63,9 @@ impl TweakShader {
             &self.device,
             &self.queue,
         )?;
-        new_ctx.copy_resources_into(&mut self.context, &wgpu_context.device, &wgpu_context.queue);
+        // well that's a confusing api...
+        self.context
+            .copy_resources_into(&mut new_ctx, &wgpu_context.device, &wgpu_context.queue);
         self.context = new_ctx;
         Ok(())
     }
