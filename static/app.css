@@ -10,19 +10,19 @@
     --error-color: #f44336;
     
     /* CodeMirror syntax highlighting */
-    --token-keyword: #ff6b9d;
-    --token-function: #ffd93d;
-    --token-string: #6bcf7f;
-    --token-comment: #8892b0;
-    --token-number: #f78c6c;
-    --token-type: #82aaff;
-    --token-variable: #eeffff;
-    --token-operator: #89ddff;
-    --token-builtin: #c792ea;
-    --token-constant: #ffcb6b;
+    --token-keyword: #d084a3;
+    --token-function: #d4c785;
+    --token-string: #8bb88b;
+    --token-comment: #7a8596;
+    --token-number: #d4a374;
+    --token-type: #9bb4d4;
+    --token-variable: #c7d2d4;
+    --token-operator: #87c5d4;
+    --token-builtin: #b598c4;
+    --token-constant: #d4c085;
     --color-text: #d4d4d4;
     --sk-fg-1: #ffffff;
-    --sk-code-atom: #f78c6c;
+    --sk-code-atom: #d4a374;
 }
 
 body {

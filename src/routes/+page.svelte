@@ -197,6 +197,8 @@
         background-color: var(--bg-color);
         display: flex;
         flex-direction: column;
+        max-width: 1600px;
+        margin: 0 auto;
     }
 
     @media (min-width: 768px) {
@@ -248,5 +250,26 @@
 
     .right-column {
         flex: 1;
+    }
+
+    :global(.cm-selectionBackground) {
+        background-color: #3a3a3a !important;
+    }
+
+    :global(.cm-focused .cm-selectionBackground) {
+        background-color: #3a3a3a !important;
+    }
+
+    :global(.cm-editor .cm-selectionLayer .cm-selectionBackground) {
+        background-color: #3a3a3a !important;
+    }
+
+    :global(.cm-gutters) {
+        background-color: #1f1f1f !important;
+        border-right: 1px solid #333 !important;
+    }
+
+    :global(.cm-lineNumbers .cm-gutterElement) {
+        color: #666 !important;
     }
 </style>
