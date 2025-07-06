@@ -19,8 +19,15 @@
     let context: WgpuContext;
     let frameCount = 0;
     let start = Date.now();
+    let webgpuSupported = false;
 
     onMount(async () => {
+        if (!navigator.gpu) {
+            webgpuSupported = false;
+            return;
+        }
+
+        webgpuSupported = true;
         await init();
         context = await initialize_library();
         tweakShader = new TweakShader(src, context);
@@ -97,18 +104,27 @@
 <main>
     <div class="container">
         <div class="left-column">
-            <canvas
-                bind:this={canvas}
-                onmouseup={() => {
-                    tweakShader.set_mouse_up();
-                }}
-                onmousedown={() => {
-                    tweakShader.set_mouse_down();
-                }}
-                onmousemove={(ev) => {
-                    tweakShader.set_mouse_position(ev.clientX, ev.clientY);
-                }}
-            ></canvas>
+            {#if webgpuSupported}
+                <canvas
+                    bind:this={canvas}
+                    onmouseup={() => {
+                        tweakShader.set_mouse_up();
+                    }}
+                    onmousedown={() => {
+                        tweakShader.set_mouse_down();
+                    }}
+                    onmousemove={(ev) => {
+                        tweakShader.set_mouse_position(ev.clientX, ev.clientY);
+                    }}
+                ></canvas>
+            {:else}
+                <div class="webgpu-placeholder">
+                    <p>WebGPU is not supported in this browser.</p>
+                    <p>
+                        Please use a WebGPU-enabled browser to view this shader.
+                    </p>
+                </div>
+            {/if}
             <div class="controls">
                 <div class="stats"></div>
                 <button onclick={togglePause} aria-label="pause">Pause</button>
@@ -203,6 +219,27 @@
         border-radius: 4px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
         height: auto;
+    }
+
+    .webgpu-placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        margin: 10px;
+        flex: 1;
+        width: 100%;
+        min-width: 400px;
+        max-width: 900px;
+        min-height: 225px;
+        border-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        background-color: var(--bg-color);
+        border: 2px dashed var(--text-color);
+        color: var(--text-color);
+        text-align: center;
+        padding: 2rem;
     }
 
     .left-column,
