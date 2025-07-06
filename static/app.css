@@ -8,6 +8,21 @@
     --editor-text: #d4d4d4;
     --success-color: #4caf50;
     --error-color: #f44336;
+    
+    /* CodeMirror syntax highlighting */
+    --token-keyword: #ff6b9d;
+    --token-function: #ffd93d;
+    --token-string: #6bcf7f;
+    --token-comment: #8892b0;
+    --token-number: #f78c6c;
+    --token-type: #82aaff;
+    --token-variable: #eeffff;
+    --token-operator: #89ddff;
+    --token-builtin: #c792ea;
+    --token-constant: #ffcb6b;
+    --color-text: #d4d4d4;
+    --sk-fg-1: #ffffff;
+    --sk-code-atom: #f78c6c;
 }
 
 body {

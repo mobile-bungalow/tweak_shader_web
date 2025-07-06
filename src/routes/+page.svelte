@@ -150,9 +150,8 @@
                     <CodeMirror
                         class="codemirror"
                         {theme}
-                        extensions={vimMode ? [vim()] : []}
+                        extensions={vimMode ? [vim(), glsl()] : [glsl()]}
                         bind:value={src}
-                        lang={glsl()}
                     ></CodeMirror>
                 </div>
                 <div class="button-row"></div>
