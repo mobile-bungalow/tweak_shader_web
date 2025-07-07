@@ -49,13 +49,13 @@ impl TweakShader {
         let context = match context {
             Ok(context) => context,
             Err(tweak_shader::Error::UniformError(e)) => {
-                return Err(JsError::new(&format!("Uniform error: {}", e)));
+                return Err(JsError::new(&e.to_string()));
             }
             Err(tweak_shader::Error::ShaderCompilationFailed(e)) => {
                 return Err(JsError::new(&e));
             }
             Err(tweak_shader::Error::DocumentParsingFailed(e)) => {
-                return Err(JsError::new(&format!("Document parsing failed: {}", e)));
+                return Err(JsError::new(&e.to_string()));
             }
         };
 
@@ -83,13 +83,13 @@ impl TweakShader {
         let mut new_ctx = match new_ctx {
             Ok(context) => context,
             Err(tweak_shader::Error::UniformError(e)) => {
-                return Err(JsError::new(&format!("Uniform error: {}", e)));
+                return Err(JsError::new(&e.to_string()));
             }
             Err(tweak_shader::Error::ShaderCompilationFailed(e)) => {
                 return Err(JsError::new(&e));
             }
             Err(tweak_shader::Error::DocumentParsingFailed(e)) => {
-                return Err(JsError::new(&format!("Document parsing failed: {}", e)));
+                return Err(JsError::new(&e.to_string()));
             }
         };
         // well that's a confusing api...

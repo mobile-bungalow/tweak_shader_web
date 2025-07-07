@@ -34,14 +34,8 @@
 
     const shaderLinter = linter(
         (view) => {
-            editorView = view; // Store the current view
-            console.log(
-                "Linter called with",
-                compilationErrors.length,
-                "errors",
-            );
+            editorView = view;
             return new Promise((resolve) => {
-                // Resolve immediately with current diagnostics
                 resolve(compilationErrors);
             });
         },
@@ -55,33 +49,21 @@
         },
     );
 
-    // Function to force immediate linter update
     const updateLinter = () => {
-        if (editorView) {
-            needs_refresh = true;
-            
-            // Method 1: Directly set diagnostics
-            try {
-                editorView.dispatch(setDiagnostics(editorView.state, compilationErrors));
-            } catch (e) {
-                console.log("setDiagnostics failed:", e);
-            }
-            
-            // Method 2: Force linting
-            try {
-                forceLinting(editorView);
-            } catch (e) {
-                console.log("forceLinting failed:", e);
-            }
-            
-            // Method 3: Dispatch empty transaction to trigger updates
-            setTimeout(() => {
-                if (editorView) {
-                    editorView.dispatch({});
-                }
-            }, 10);
+        if (!editorView) return;
+        
+        needs_refresh = true;
+        
+        try {
+            editorView.dispatch(setDiagnostics(editorView.state, compilationErrors));
+            forceLinting(editorView);
+            setTimeout(() => editorView?.dispatch({}), 10);
+        } catch (e) {
+            console.error("Linter update failed:", e);
         }
     };
+
+    let last = Date.now();
 
     onMount(async () => {
         if (!navigator.gpu) {
@@ -92,6 +74,7 @@
         webgpuSupported = true;
         await init();
         context = await initialize_library();
+        
         try {
             tweakShader = new TweakShader(src, context);
             inputs = tweakShader.get_input_list();
@@ -104,24 +87,18 @@
 
         canvas.width = 800;
         canvas.height = 450;
-        if (tweakShader) {
-            draw();
-        }
+        if (tweakShader) draw();
     });
 
-    let last = Date.now();
-
     const draw = () => {
-        if (!tweakShader || !canvas) {
-            return;
-        }
+        if (!tweakShader || !canvas) return;
 
-        frameCount += 1;
+        frameCount++;
         const time = Date.now();
         const elapsed = time - start;
         const delta = last - time;
         last = Date.now();
-        let now = new Date();
+        const now = new Date();
 
         tweakShader.update_resolution(canvas.width, canvas.height);
         tweakShader.update_frame_count(frameCount);
@@ -135,9 +112,7 @@
         tweakShader.update_delta(delta / 1000.0);
         tweakShader.render(canvas);
 
-        if (!paused) {
-            requestAnimationFrame(draw);
-        }
+        if (!paused) requestAnimationFrame(draw);
     };
 
     const parseCompilationErrors = (errorString: string): Diagnostic[] => {
@@ -146,57 +121,39 @@
         const srcLines = src.split("\n");
 
         for (const line of lines) {
-            if (line.trim()) {
-                // Try to parse "at location line:column" format (e.g., "Unknown variable: normalized_coords at location 15:23")
-                const locationMatch = line.match(/at location (\d+):(\d+)/i);
-                if (locationMatch) {
-                    let reportedLineNum = parseInt(locationMatch[1]) - 1; // Convert to 0-based
-                    const col = parseInt(locationMatch[2]) - 1; // Convert to 0-based
+            if (!line.trim()) continue;
 
-                    // Count #pragma lines before the reported line to adjust line number
-                    let pragmaCount = 0;
-                    for (
-                        let i = 0;
-                        i < reportedLineNum && i < srcLines.length;
-                        i++
-                    ) {
-                        if (srcLines[i].trim().startsWith("#pragma")) {
-                            pragmaCount++;
-                        }
-                    }
+            const locationMatch = line.match(/at location (\d+):(\d+)/i);
+            if (locationMatch) {
+                const reportedLineNum = parseInt(locationMatch[1]) - 1;
+                const col = parseInt(locationMatch[2]) - 1;
 
-                    // Adjust line number by adding back pragma lines
-                    const actualLineNum = reportedLineNum + pragmaCount;
+                const pragmaCount = srcLines
+                    .slice(0, reportedLineNum)
+                    .filter(line => line.trim().startsWith("#pragma")).length;
 
-                    // Extract the message part before "at location"
-                    const message = line.split(" at location")[0].trim();
+                const actualLineNum = reportedLineNum + pragmaCount;
+                const message = line.split(" at location")[0].trim();
 
-                    // Calculate actual character position
-                    let from = 0;
-                    for (
-                        let i = 0;
-                        i < actualLineNum && i < srcLines.length;
-                        i++
-                    ) {
-                        from += srcLines[i].length + 1; // +1 for newline
-                    }
-                    from += col;
-
-                    errors.push({
-                        from: Math.max(0, from),
-                        to: Math.max(0, from + 1),
-                        severity: "error",
-                        message: message,
-                    });
-                } else {
-                    // If no specific line info, add as general error at end
-                    errors.push({
-                        from: Math.max(0, src.length - 1),
-                        to: src.length,
-                        severity: "error",
-                        message: line.trim(),
-                    });
+                let from = 0;
+                for (let i = 0; i < actualLineNum && i < srcLines.length; i++) {
+                    from += srcLines[i].length + 1;
                 }
+                from += col;
+
+                errors.push({
+                    from: Math.max(0, from),
+                    to: Math.max(0, from + 1),
+                    severity: "error",
+                    message,
+                });
+            } else {
+                errors.push({
+                    from: Math.max(0, src.length - 1),
+                    to: src.length,
+                    severity: "error",
+                    message: line.trim(),
+                });
             }
         }
 
@@ -220,15 +177,14 @@
     const recompile = () => {
         frameCount = 0;
         start = Date.now();
+        
         try {
             compilationErrors = [];
             generalError = null;
             tweakShader.update_src(src, context);
             inputs = tweakShader.get_input_list();
-            updateLinter(); // Force linter refresh on successful recompile
-            if (tweakShader && canvas) {
-                draw();
-            }
+            updateLinter();
+            if (tweakShader && canvas) draw();
         } catch (e) {
             handleShaderError(e);
         }
@@ -237,10 +193,7 @@
     let paused = false;
     const togglePause = () => {
         paused = !paused;
-
-        if (!paused) {
-            requestAnimationFrame(draw);
-        }
+        if (!paused) requestAnimationFrame(draw);
     };
 
     let vimMode = false;
@@ -314,7 +267,6 @@
                 >
                 {#if generalError}
                     <div class="general-error">
-                        <strong>Error:</strong>
                         {generalError}
                     </div>
                 {/if}
@@ -441,7 +393,21 @@
         white-space: pre-wrap;
     }
 
-    /* CodeMirror lint styling */
+    :global(.cm-selectionBackground),
+    :global(.cm-focused .cm-selectionBackground),
+    :global(.cm-editor .cm-selectionLayer .cm-selectionBackground) {
+        background-color: #3a3a3a !important;
+    }
+
+    :global(.cm-gutters) {
+        background-color: #1f1f1f !important;
+        border-right: 1px solid #333 !important;
+    }
+
+    :global(.cm-lineNumbers .cm-gutterElement) {
+        color: #666 !important;
+    }
+
     :global(.cm-diagnostic) {
         padding: 2px 4px 2px 6px;
         margin-left: -1px;
@@ -461,7 +427,6 @@
         background-position: left bottom;
     }
 
-    /* Lint gutter styling */
     :global(.cm-gutter-lint) {
         width: 1.2em;
         background-color: #1a1a1a !important;
@@ -479,7 +444,6 @@
         position: relative;
     }
 
-    /* Always show error tooltips */
     :global(.cm-lint-marker-error::after) {
         content: attr(title);
         position: absolute;
@@ -497,7 +461,6 @@
         pointer-events: none;
     }
 
-    /* Show diagnostic ranges without hover */
     :global(.cm-lintPoint) {
         position: relative;
     }
