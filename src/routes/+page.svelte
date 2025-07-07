@@ -256,13 +256,7 @@
     let linkButtonBlinking = false;
 
     const saveAsSlug = () => {
-        const matchingExample = shaderExamples.find(
-            (example) => selectedExample?.value === example.value,
-        );
-
-        const url = matchingExample
-            ? `${window.location.origin}${base}/?file=${encodeURIComponent(matchingExample.value)}`
-            : `${window.location.origin}${base}/?shader=${encodeURIComponent(btoa(src))}`;
+        const url = `${window.location.origin}${base}/?shader=${encodeURIComponent(btoa(src))}`;
 
         navigator.clipboard
             .writeText(url)
