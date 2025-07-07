@@ -21,7 +21,6 @@
     import Button from "../components/Button.svelte";
     import Dropdown from "../components/Dropdown.svelte";
     import { Play, Pause, RotateCcw, Save, Keyboard } from "lucide-svelte";
-
     let inputs: Map<String, any> = new Map();
     let canvas: HTMLCanvasElement;
     let tweakShader: TweakShader;
@@ -54,11 +53,13 @@
 
     const updateLinter = () => {
         if (!editorView) return;
-        
+
         needs_refresh = true;
-        
+
         try {
-            editorView.dispatch(setDiagnostics(editorView.state, compilationErrors));
+            editorView.dispatch(
+                setDiagnostics(editorView.state, compilationErrors),
+            );
             forceLinting(editorView);
             setTimeout(() => editorView?.dispatch({}), 10);
         } catch (e) {
@@ -77,7 +78,7 @@
         webgpuSupported = true;
         await init();
         context = await initialize_library();
-        
+
         try {
             tweakShader = new TweakShader(src, context);
             inputs = tweakShader.get_input_list();
@@ -133,7 +134,7 @@
 
                 const pragmaCount = srcLines
                     .slice(0, reportedLineNum)
-                    .filter(line => line.trim().startsWith("#pragma")).length;
+                    .filter((line) => line.trim().startsWith("#pragma")).length;
 
                 const actualLineNum = reportedLineNum + pragmaCount;
                 const message = line.split(" at location")[0].trim();
@@ -180,7 +181,7 @@
     const recompile = () => {
         frameCount = 0;
         start = Date.now();
-        
+
         try {
             compilationErrors = [];
             generalError = null;
@@ -197,7 +198,6 @@
     let autoRecompile = true;
     let canvasWidth = 800;
     let canvasHeight = 450;
-
 
     const togglePause = () => {
         paused = !paused;
@@ -251,27 +251,32 @@
             {/if}
             <div class="controls">
                 <div class="control-group">
-                    <label class="control-label">Playback</label>
-                    <Button 
-                        variant={paused ? "success" : "secondary"} 
-                        size="sm" 
+                    <label class="control-label">Time Step</label>
+                    <Button
+                        variant={paused ? "success" : "secondary"}
+                        size="sm"
                         onclick={togglePause}
                         title={paused ? "Resume animation" : "Pause animation"}
                     >
-                        {#if paused}<Play size="14" />{:else}<Pause size="14" />{/if} {paused ? "Play" : "Pause"}
+                        {#if paused}<Play size="14" />{:else}<Pause
+                                size="14"
+                            />{/if}
+                        {paused ? "Play" : "Pause"}
                     </Button>
                 </div>
 
-
                 <div class="control-group">
                     <label class="control-label">Auto Recompile</label>
-                    <Button 
-                        variant={autoRecompile ? "primary" : "secondary"} 
-                        size="sm" 
+                    <Button
+                        variant={autoRecompile ? "primary" : "secondary"}
+                        size="sm"
                         onclick={toggleAutoRecompile}
-                        title={autoRecompile ? "Disable auto-recompile" : "Enable auto-recompile"}
+                        title={autoRecompile
+                            ? "Disable auto-recompile"
+                            : "Enable auto-recompile"}
                     >
-                        <RotateCcw size="14" /> {autoRecompile ? "Auto" : "Manual"}
+                        <RotateCcw size="14" />
+                        {autoRecompile ? "Auto" : "Manual"}
                     </Button>
                 </div>
             </div>
@@ -301,31 +306,36 @@
                 </div>
                 <div class="editor-controls">
                     <div class="control-row">
-                        <Button 
-                            variant="primary" 
-                            size="sm" 
+                        <Button
+                            variant="primary"
+                            size="sm"
                             onclick={recompile}
                             disabled={autoRecompile}
-                            title={autoRecompile ? "Auto-recompile is enabled" : "Manually recompile shader"}
+                            title={autoRecompile
+                                ? "Auto-recompile is enabled"
+                                : "Manually recompile shader"}
                         >
                             <RotateCcw size="14" /> Recompile
                         </Button>
-                        
-                        <Button 
-                            variant="secondary" 
+
+                        <Button
+                            variant="secondary"
                             size="sm"
                             title="Save shader to file"
                         >
                             <Save size="14" /> Save
                         </Button>
-                        
-                        <Button 
-                            variant={vimMode ? "primary" : "secondary"} 
-                            size="sm" 
+
+                        <Button
+                            variant={vimMode ? "primary" : "secondary"}
+                            size="sm"
                             onclick={toggleVim}
-                            title={vimMode ? "Disable Vim keybindings" : "Enable Vim keybindings"}
+                            title={vimMode
+                                ? "Disable Vim keybindings"
+                                : "Enable Vim keybindings"}
                         >
-                            <Keyboard size="14" /> {vimMode ? "Vim: ON" : "Vim: OFF"}
+                            <Keyboard size="14" />
+                            {vimMode ? "Vim: ON" : "Vim: OFF"}
                         </Button>
                     </div>
                 </div>
