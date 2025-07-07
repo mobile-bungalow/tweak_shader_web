@@ -17,6 +17,19 @@
         lintGutter,
         setDiagnostics,
     } from "@codemirror/lint";
+    import {
+        autocompletion,
+        CompletionContext,
+        startCompletion,
+        acceptCompletion,
+        completionStatus,
+        closeCompletion,
+        moveCompletionSelection,
+        completionKeymap,
+    } from "@codemirror/autocomplete";
+    import { keymap, EditorView } from "@codemirror/view";
+    import { indentMore, indentLess, defaultKeymap } from "@codemirror/commands";
+    import { Prec } from "@codemirror/state";
     import Input from "../components/Input.svelte";
     import ImageInput from "../components/Image.svelte";
     import Button from "../components/Button.svelte";
@@ -43,6 +56,111 @@
     let editorView: any = null;
     let needs_refresh = false;
     let editorKey = 0;
+
+    const glslKeywords = [
+        "vec2",
+        "vec3",
+        "vec4",
+        "ivec2",
+        "ivec3",
+        "ivec4",
+        "bvec2",
+        "bvec3",
+        "bvec4",
+        "mat2",
+        "mat3",
+        "mat4",
+        "sampler2D",
+        "samplerCube",
+        "sampler3D",
+        "uniform",
+        "layout",
+        "binding",
+        "location",
+        "writeonly",
+        "readonly",
+        "local_size_x",
+        "local_size_y",
+        "local_size_z",
+    ];
+
+    const glslBuiltins = [
+        "gl_GlobalInvocationID",
+        "gl_LocalInvocationID",
+        "gl_WorkGroupID",
+        "gl_Position",
+        "gl_FragCoord",
+        "gl_VertexID",
+        "gl_InstanceID",
+        "normalize",
+        "smoothstep",
+        "inversesqrt",
+        "imageStore",
+        "imageLoad",
+        "imageSize",
+        "memoryBarrier",
+        "texture2D",
+        "textureCube",
+    ];
+
+    const extractIdentifiers = (source: string) => {
+        const identifiers = new Set<string>();
+
+        // Match variable declarations and function names
+        const patterns = [
+            /(?:float|int|vec[234]|ivec[234]|mat[234]|bool)\s+(\w+)/g,
+            /uniform\s+\w+\s+(\w+)/g,
+            /(\w+)\s*\(/g, // function calls
+        ];
+
+        patterns.forEach((pattern) => {
+            let match;
+            while ((match = pattern.exec(source)) !== null) {
+                const identifier = match[1];
+                if (
+                    identifier.length > 2 &&
+                    !glslKeywords.includes(identifier) &&
+                    !glslBuiltins.includes(identifier)
+                ) {
+                    identifiers.add(identifier);
+                }
+            }
+        });
+
+        return Array.from(identifiers);
+    };
+
+    const createCompletionOptions = () => {
+        const contextIdentifiers = extractIdentifiers(src);
+        return [
+            ...glslKeywords.map((keyword) => ({
+                label: keyword,
+                type: "keyword",
+            })),
+            ...glslBuiltins.map((builtin) => ({
+                label: builtin,
+                type: "function",
+            })),
+            ...contextIdentifiers.map((identifier) => ({
+                label: identifier,
+                type: "variable",
+            })),
+        ];
+    };
+
+    const glslCompletions = (context: CompletionContext) => {
+        const word = context.matchBefore(/\w*/);
+        if (!word) return null;
+        if (word.from == word.to && !context.explicit) return null;
+
+        const options = createCompletionOptions();
+        return {
+            from: word.from,
+            options: options.filter((opt) =>
+                opt.label.toLowerCase().startsWith(word.text.toLowerCase()),
+            ),
+        };
+    };
 
     const shaderLinter = linter(
         (view) => {
@@ -79,8 +197,7 @@
 
     let last = Date.now();
 
-    onMount(async () => {
-        // First, handle URL parameters to load shader before initializing
+    const loadShaderFromUrl = async () => {
         const urlParams = new URLSearchParams(window.location.search);
         const fileParam = urlParams.get("file");
         const shaderParam = urlParams.get("shader");
@@ -90,29 +207,33 @@
                 const response = await fetch(`${base}${fileParam}`);
                 const shaderCode = await response.text();
                 src = shaderCode;
-                editorKey++; // Force editor update
+                editorKey++;
             } catch (error) {
                 console.error("Failed to load shader from file:", error);
             }
         } else if (shaderParam) {
             try {
                 src = atob(decodeURIComponent(shaderParam));
-                editorKey++; // Force editor update
+                editorKey++;
             } catch (error) {
                 console.error("Failed to decode shader from URL:", error);
             }
         }
+    };
 
-        // Then initialize with the loaded shader
+    const initializeWebGPU = async () => {
         if (!navigator.gpu) {
             webgpuSupported = false;
-            return;
+            return false;
         }
 
         webgpuSupported = true;
         await init();
         context = await initialize_library();
+        return true;
+    };
 
+    const initializeShader = () => {
         try {
             tweakShader = new TweakShader(src, context);
             inputs = tweakShader.get_input_list();
@@ -122,11 +243,22 @@
         } catch (e) {
             handleShaderError(e);
         }
+    };
 
+    const setupCanvas = () => {
         canvas.width = 800;
         canvas.height = 450;
-
         if (tweakShader) draw();
+    };
+
+    onMount(async () => {
+        await loadShaderFromUrl();
+
+        const webgpuReady = await initializeWebGPU();
+        if (!webgpuReady) return;
+
+        initializeShader();
+        setupCanvas();
     });
 
     const draw = () => {
@@ -154,6 +286,58 @@
         if (!paused) requestAnimationFrame(draw);
     };
 
+    const calculateErrorPosition = (
+        reportedLineNum: number,
+        col: number,
+        srcLines: string[],
+    ) => {
+        const pragmaCount = srcLines
+            .slice(0, reportedLineNum)
+            .filter((line) => line.trim().startsWith("#pragma")).length;
+
+        const actualLineNum = reportedLineNum + pragmaCount;
+        let from = 0;
+        for (let i = 0; i < actualLineNum && i < srcLines.length; i++) {
+            from += srcLines[i].length + 1;
+        }
+        from += col;
+
+        const maxPos = src.length;
+        return {
+            from: Math.max(0, Math.min(from, maxPos - 1)),
+            to: Math.max(0, Math.min(from + 1, maxPos)),
+        };
+    };
+
+    const parseLocationError = (
+        line: string,
+        srcLines: string[],
+    ): Diagnostic | null => {
+        const locationMatch = line.match(/at location (\d+):(\d+)/i);
+        if (!locationMatch) return null;
+
+        const reportedLineNum = parseInt(locationMatch[1]) - 1;
+        const col = parseInt(locationMatch[2]) - 1;
+        const message = line.split(" at location")[0].trim();
+        const { from, to } = calculateErrorPosition(
+            reportedLineNum,
+            col,
+            srcLines,
+        );
+
+        return { from, to, severity: "error", message };
+    };
+
+    const parseGeneralError = (line: string): Diagnostic => {
+        const maxPos = src.length;
+        return {
+            from: Math.max(0, maxPos - 1),
+            to: maxPos,
+            severity: "error",
+            message: line.trim(),
+        };
+    };
+
     const parseCompilationErrors = (errorString: string): Diagnostic[] => {
         const errors: Diagnostic[] = [];
         const lines = errorString.split("\n");
@@ -162,43 +346,11 @@
         for (const line of lines) {
             if (!line.trim()) continue;
 
-            const locationMatch = line.match(/at location (\d+):(\d+)/i);
-            if (locationMatch) {
-                const reportedLineNum = parseInt(locationMatch[1]) - 1;
-                const col = parseInt(locationMatch[2]) - 1;
-
-                const pragmaCount = srcLines
-                    .slice(0, reportedLineNum)
-                    .filter((line) => line.trim().startsWith("#pragma")).length;
-
-                const actualLineNum = reportedLineNum + pragmaCount;
-                const message = line.split(" at location")[0].trim();
-
-                let from = 0;
-                for (let i = 0; i < actualLineNum && i < srcLines.length; i++) {
-                    from += srcLines[i].length + 1;
-                }
-                from += col;
-
-                // Ensure positions are within document bounds
-                const maxPos = src.length;
-                from = Math.max(0, Math.min(from, maxPos - 1));
-                const to = Math.max(0, Math.min(from + 1, maxPos));
-
-                errors.push({
-                    from,
-                    to,
-                    severity: "error",
-                    message,
-                });
+            const locationError = parseLocationError(line, srcLines);
+            if (locationError) {
+                errors.push(locationError);
             } else {
-                const maxPos = src.length;
-                errors.push({
-                    from: Math.max(0, maxPos - 1),
-                    to: maxPos,
-                    severity: "error",
-                    message: line.trim(),
-                });
+                errors.push(parseGeneralError(line));
             }
         }
 
@@ -252,6 +404,11 @@
     let vimMode = false;
     const toggleVim = () => {
         vimMode = !vimMode;
+    };
+
+    let autocompleteEnabled = true;
+    const toggleAutocomplete = () => {
+        autocompleteEnabled = !autocompleteEnabled;
     };
 
     const shaderExamples = [
@@ -397,15 +554,48 @@
                         <CodeMirror
                             class="codemirror"
                             {theme}
-                            extensions={vimMode
-                                ? [vim(), glsl(), shaderLinter, lintGutter()]
-                                : [glsl(), shaderLinter, lintGutter()]}
+                            extensions={[
+                                glsl(),
+                                shaderLinter,
+                                lintGutter(),
+                                ...(vimMode ? [vim()] : []),
+                                autocompletion({
+                                    override: autocompleteEnabled
+                                        ? [glslCompletions]
+                                        : [],
+                                    activateOnTyping: autocompleteEnabled,
+                                    maxRenderedOptions: 8,
+                                    defaultKeymap: true,
+                                }),
+                                keymap.of(defaultKeymap),
+                                keymap.of(completionKeymap),
+                                Prec.highest(keymap.of([
+                                    {
+                                        key: "Tab",
+                                        run: (e) => {
+                                            if (completionStatus(e.state)) {
+                                                return acceptCompletion(e);
+                                            }
+                                            return indentMore(e);
+                                        },
+                                    },
+                                    {
+                                        key: "Shift-Tab",
+                                        run: indentLess,
+                                    },
+                                ])),
+                            ]}
                             bind:value={src}
                         ></CodeMirror>
                     {/key}
                     <div class="error-banner">
                         {#if compilationErrors.length > 0}
-                            <span class="error-count">{compilationErrors.length} error{compilationErrors.length !== 1 ? 's' : ''}</span>
+                            <span class="error-count"
+                                >{compilationErrors.length} error{compilationErrors.length !==
+                                1
+                                    ? "s"
+                                    : ""}</span
+                            >
                         {:else if generalError}
                             <span class="error-count">1 error</span>
                         {:else}
@@ -457,6 +647,19 @@
                         >
                             <Keyboard size="14" />
                             {vimMode ? "Vim: ON" : "Vim: OFF"}
+                        </Button>
+
+                        <Button
+                            variant={autocompleteEnabled
+                                ? "primary"
+                                : "secondary"}
+                            size="sm"
+                            onclick={toggleAutocomplete}
+                            title={autocompleteEnabled
+                                ? "Disable autocomplete"
+                                : "Enable autocomplete"}
+                        >
+                            Autocomplete: {autocompleteEnabled ? "ON" : "OFF"}
                         </Button>
                     </div>
                 </div>
@@ -803,5 +1006,83 @@
         font-weight: 500;
         color: var(--text-color);
         text-transform: capitalize;
+    }
+
+    :global(.cm-tooltip-autocomplete) {
+        background: #1a1a1a !important;
+        border: 1px solid #333 !important;
+        border-radius: 6px !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
+        backdrop-filter: blur(8px) !important;
+    }
+
+    :global(.cm-tooltip-autocomplete > ul) {
+        background: transparent !important;
+        border: none !important;
+        border-radius: 6px !important;
+        max-height: 200px !important;
+        overflow-y: auto !important;
+    }
+
+    :global(.cm-tooltip-autocomplete ul li) {
+        background: transparent !important;
+        color: #e0e0e0 !important;
+        padding: 6px 12px !important;
+        border-radius: 4px !important;
+        margin: 2px !important;
+        font-size: 0.8rem !important;
+        font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace !important;
+    }
+
+    :global(.cm-tooltip-autocomplete ul li[aria-selected]) {
+        background: #2d5aa0 !important;
+        color: white !important;
+    }
+
+    :global(.cm-tooltip-autocomplete ul li:hover) {
+        background: #374151 !important;
+        color: white !important;
+    }
+
+    :global(.cm-completionLabel) {
+        color: inherit !important;
+        font-weight: 500 !important;
+    }
+
+    :global(.cm-completionDetail) {
+        color: #9ca3af !important;
+        font-style: italic !important;
+        margin-left: 8px !important;
+    }
+
+    :global(.cm-completionInfo) {
+        background: #1f1f1f !important;
+        border: 1px solid #333 !important;
+        color: #e0e0e0 !important;
+        border-radius: 4px !important;
+        padding: 8px !important;
+        font-size: 0.8rem !important;
+    }
+
+    :global(.cm-completionIcon) {
+        display: none !important;
+    }
+
+    :global(.cm-completionIcon-keyword),
+    :global(.cm-completionIcon-function),
+    :global(.cm-completionIcon-variable) {
+        display: none !important;
+    }
+
+    :global(.cm-tooltip-autocomplete ul li[data-type="variable"]) {
+        color: #9cdcfe !important;
+    }
+
+    :global(.cm-tooltip-autocomplete ul li[data-type="keyword"]) {
+        color: #569cd6 !important;
+    }
+
+    :global(.cm-tooltip-autocomplete ul li[data-type="function"]) {
+        color: #dcdcaa !important;
     }
 </style>
