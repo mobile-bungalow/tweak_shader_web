@@ -60,7 +60,6 @@
         const reader = new FileReader();
         reader.onload = (e) => {
             imagePreview = e.target?.result as string;
-            // Create ImageData from file
             const img = new Image();
             img.onload = () => {
                 const canvas = document.createElement('canvas');
@@ -83,7 +82,6 @@
         if (fileInput) {
             fileInput.value = '';
         }
-        // Load placeholder image when removing uploaded image
         loadPlaceholderImage();
     };
     

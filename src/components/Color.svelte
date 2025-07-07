@@ -56,14 +56,12 @@
         change(value);
     };
 
-    // Update local values when prop changes
     $: {
         r = value[0];
         g = value[1];
         b = value[2];
     }
 
-    // Convert to hex for color picker
     $: hexValue =
         "#" +
         Math.round(r * 255)

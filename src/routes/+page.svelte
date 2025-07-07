@@ -221,11 +221,10 @@
         vimMode = !vimMode;
     };
 
-    // Example shader management
     const shaderExamples = [
         { label: "Exit the Matrix", value: "/exit_the_matrix.glsl" },
         { label: "Image Input", value: "/image_input.glsl" },
-        { label: "wiggler", value: "/wiggler.glsl" },
+        { label: "Wiggler", value: "/wiggler.glsl" },
         { label: "Compute Multipass", value: "/compute_multipass.glsl" },
     ];
 
@@ -233,16 +232,13 @@
 
     const loadExample = async (example) => {
         if (example) {
-            // Navigate to new page with file parameter
             const url = `${window.location.origin}${window.location.pathname}?file=${encodeURIComponent(example)}`;
             window.location.href = url;
         } else {
-            // For default shader, navigate to clean URL
             window.location.href = `${window.location.origin}${window.location.pathname}`;
         }
     };
 
-    // Save functionality
     const saveToFile = () => {
         const blob = new Blob([src], { type: "text/plain" });
         const url = URL.createObjectURL(blob);
@@ -255,26 +251,17 @@
         URL.revokeObjectURL(url);
     };
 
-    // Base64 slug functionality
     let linkButtonText = "Save link";
     let linkButtonBlinking = false;
 
     const saveAsSlug = () => {
-        // Check if current shader matches one of the static files
-        const matchingExample = shaderExamples.find((example) => {
-            // Compare current selection
-            return selectedExample && selectedExample.value === example.value;
-        });
+        const matchingExample = shaderExamples.find(example => 
+            selectedExample?.value === example.value
+        );
 
-        let url;
-        if (matchingExample) {
-            // Use file parameter for static shaders
-            url = `${window.location.origin}${window.location.pathname}?file=${encodeURIComponent(matchingExample.value)}`;
-        } else {
-            // Fall back to base64 for custom shaders
-            const base64 = btoa(src);
-            url = `${window.location.origin}${window.location.pathname}?shader=${encodeURIComponent(base64)}`;
-        }
+        const url = matchingExample 
+            ? `${window.location.origin}${window.location.pathname}?file=${encodeURIComponent(matchingExample.value)}`
+            : `${window.location.origin}${window.location.pathname}?shader=${encodeURIComponent(btoa(src))}`;
 
         navigator.clipboard
             .writeText(url)
@@ -286,42 +273,30 @@
                     linkButtonBlinking = false;
                 }, 750);
             })
-            .catch((err) => {
+            .catch(err => {
                 console.error("Failed to copy to clipboard:", err);
-                // Fallback: show the URL in a prompt
                 prompt("Copy this URL:", url);
             });
     };
 
-    // Load shader from URL on mount
     onMount(async () => {
         const urlParams = new URLSearchParams(window.location.search);
         const fileParam = urlParams.get("file");
         const shaderParam = urlParams.get("shader");
 
         if (fileParam) {
-            // Load from static file
             try {
                 const response = await fetch(`/static${fileParam}`);
                 const shaderCode = await response.text();
                 src = shaderCode;
-                // Find matching example
-                const matchingExample = shaderExamples.find(
-                    (example) => example.value === fileParam,
-                );
-                if (matchingExample) {
-                    selectedExample = matchingExample;
-                } else {
-                    selectedExample = { label: "Custom", value: null };
-                }
+                const matchingExample = shaderExamples.find(example => example.value === fileParam);
+                selectedExample = matchingExample || { label: "Custom", value: null };
             } catch (error) {
                 console.error("Failed to load shader from file:", error);
             }
         } else if (shaderParam) {
-            // Load from base64 (fallback for custom shaders)
             try {
-                const decodedShader = atob(decodeURIComponent(shaderParam));
-                src = decodedShader;
+                src = atob(decodeURIComponent(shaderParam));
                 selectedExample = { label: "Custom", value: null };
             } catch (error) {
                 console.error("Failed to decode shader from URL:", error);
@@ -329,7 +304,6 @@
         }
     });
 
-    // Auto-recompile when source changes
     let srcChangeTimeout: number;
     $: if (autoRecompile && src) {
         clearTimeout(srcChangeTimeout);
