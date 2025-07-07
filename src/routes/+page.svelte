@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { DEFAULT_SHADER, inputValueToProps, theme } from "$lib";
+    import { base } from "$app/paths";
     import init, {
         TweakShader,
         WgpuContext,
@@ -232,10 +233,10 @@
 
     const loadExample = async (example) => {
         if (example) {
-            const url = `${window.location.origin}${window.location.pathname}?file=${encodeURIComponent(example)}`;
+            const url = `${window.location.origin}${base}/?file=${encodeURIComponent(example)}`;
             window.location.href = url;
         } else {
-            window.location.href = `${window.location.origin}${window.location.pathname}`;
+            window.location.href = `${window.location.origin}${base}/`;
         }
     };
 
@@ -260,8 +261,8 @@
         );
 
         const url = matchingExample
-            ? `${window.location.origin}${window.location.pathname}?file=${encodeURIComponent(matchingExample.value)}`
-            : `${window.location.origin}${window.location.pathname}?shader=${encodeURIComponent(btoa(src))}`;
+            ? `${window.location.origin}${base}/?file=${encodeURIComponent(matchingExample.value)}`
+            : `${window.location.origin}${base}/?shader=${encodeURIComponent(btoa(src))}`;
 
         navigator.clipboard
             .writeText(url)
@@ -286,7 +287,7 @@
 
         if (fileParam) {
             try {
-                const response = await fetch(`${fileParam}`);
+                const response = await fetch(`${base}${fileParam}`);
                 const shaderCode = await response.text();
                 src = shaderCode;
                 const matchingExample = shaderExamples.find(

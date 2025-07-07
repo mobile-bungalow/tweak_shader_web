@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
+    import { base } from "$app/paths";
 
     export let change: (val?: ImageData) => void;
     export let name: string = "input_image";
@@ -27,7 +28,7 @@
             }
         };
         img.crossOrigin = "anonymous";
-        img.src = "/wolfie.png";
+        img.src = `${base}/wolfie.png`;
     };
 
     const handleFileSelect = (event: Event) => {
@@ -110,7 +111,7 @@
             </button>
         {:else}
             <img
-                src="/wolfie.png"
+                src="{base}/wolfie.png"
                 alt="Placeholder"
                 class="placeholder-image"
             />

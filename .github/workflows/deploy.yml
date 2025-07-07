@@ -35,6 +35,8 @@ jobs:
 
       - name: Build the site
         run: npm run build
+        env:
+          NODE_ENV: production
 
       - name: Upload artifacts for GitHub Pages
         uses: actions/upload-pages-artifact@v3
