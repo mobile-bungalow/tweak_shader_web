@@ -6,7 +6,7 @@
 #pragma tweak_shader(version=1.0)
 
 #pragma utility_block(ShaderInputs)
-layout(push_constant) uniform ShaderInputs {
+layout(binding = 1, set = 0) uniform ShaderInputs {
     float iTime;
     float iTimeDelta;
     float iFrameRate;
@@ -21,7 +21,7 @@ layout(push_constant) uniform ShaderInputs {
 #pragma input(color, name=bg_tint, default=[0.341, 0.77, 0.341, 1.0])
 #pragma input(int, name=steps, default=80, min=0, max=200)
 #pragma input(float, name=time_scale, default=7, min=0.1, max=30)
-layout(binding = 0) uniform custom_inputs {
+layout(binding = 0, set = 0) uniform custom_inputs {
     int steps;
     float time_scale;
     vec4 cube_tint;

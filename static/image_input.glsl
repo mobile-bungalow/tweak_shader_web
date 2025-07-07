@@ -1,7 +1,7 @@
 #version 450
 
 #pragma utility_block(ShaderInputs)
-layout(push_constant) uniform ShaderInputs {
+layout(set = 0, binding = 3) uniform ShaderInputs {
     float time; // shader playback time (in seconds)
     float time_delta; // elapsed time since last frame in secs
     float frame_rate; // number of frames per second estimates

@@ -1,4 +1,5 @@
 import { theme } from "./theme";
+
 const DEFAULT_SHADER = `#pragma stage(compute)
 
 #pragma input(float, name=blue, default=0.0, min=0.0, max=1.0)

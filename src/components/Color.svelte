@@ -2,34 +2,37 @@
     import { RotateCcw } from "lucide-svelte";
     export let value: [number, number, number];
     export let change: (val: [number, number, number]) => void;
-    export let _default: [number, number, number] = [1, 1, 1];
+    export let _default: [number, number, number, number] = [1.0, 1.0, 1.0, 1];
 
     let r = value[0];
     let g = value[1];
     let b = value[2];
 
-    const handleChannelChange = (channel: 'r' | 'g' | 'b', newValue: number) => {
-        if (channel === 'r') r = newValue;
-        if (channel === 'g') g = newValue;
-        if (channel === 'b') b = newValue;
-        
-        value = [r, g, b];
+    const handleChannelChange = (
+        channel: "r" | "g" | "b",
+        newValue: number,
+    ) => {
+        if (channel === "r") r = newValue;
+        if (channel === "g") g = newValue;
+        if (channel === "b") b = newValue;
+
+        value = [r, g, b, 255];
         change(value);
     };
 
     const handleRSlider = (e: Event) => {
         const target = e.target as HTMLInputElement;
-        handleChannelChange('r', Number(target.value));
+        handleChannelChange("r", Number(target.value));
     };
 
     const handleGSlider = (e: Event) => {
         const target = e.target as HTMLInputElement;
-        handleChannelChange('g', Number(target.value));
+        handleChannelChange("g", Number(target.value));
     };
 
     const handleBSlider = (e: Event) => {
         const target = e.target as HTMLInputElement;
-        handleChannelChange('b', Number(target.value));
+        handleChannelChange("b", Number(target.value));
     };
 
     const handleHexChange = (e: Event) => {
@@ -39,9 +42,9 @@
             const r = parseInt(hex.slice(1, 3), 16) / 255;
             const g = parseInt(hex.slice(3, 5), 16) / 255;
             const b = parseInt(hex.slice(5, 7), 16) / 255;
-            handleChannelChange('r', r);
-            handleChannelChange('g', g);
-            handleChannelChange('b', b);
+            handleChannelChange("r", r);
+            handleChannelChange("g", g);
+            handleChannelChange("b", b);
         }
     };
 
@@ -61,17 +64,22 @@
     }
 
     // Convert to hex for color picker
-    $: hexValue = '#' + 
-        Math.round(r * 255).toString(16).padStart(2, '0') +
-        Math.round(g * 255).toString(16).padStart(2, '0') +
-        Math.round(b * 255).toString(16).padStart(2, '0');
+    $: hexValue =
+        "#" +
+        Math.round(r * 255)
+            .toString(16)
+            .padStart(2, "0") +
+        Math.round(g * 255)
+            .toString(16)
+            .padStart(2, "0") +
+        Math.round(b * 255)
+            .toString(16)
+            .padStart(2, "0");
 
     $: rgbString = `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
 </script>
 
 <div class="color-input">
-    <div class="color-preview" style="background-color: {rgbString}"></div>
-    
     <div class="channels">
         <div class="channel-group">
             <label class="channel-label" style="color: #ff6b6b">R</label>
@@ -86,14 +94,17 @@
                     class="slider red-slider"
                 />
                 <div class="slider-track"></div>
-                <div class="slider-fill red-fill" style="width: {r * 100}%"></div>
+                <div
+                    class="slider-fill red-fill"
+                    style="width: {r * 100}%"
+                ></div>
                 <div class="slider-thumb" style="left: {r * 100}%"></div>
             </div>
             <input
                 type="number"
                 step="0.01"
                 bind:value={r}
-                on:input={() => handleChannelChange('r', r)}
+                on:input={() => handleChannelChange("r", r)}
                 min="0"
                 max="1"
                 class="number-input"
@@ -113,14 +124,17 @@
                     class="slider green-slider"
                 />
                 <div class="slider-track"></div>
-                <div class="slider-fill green-fill" style="width: {g * 100}%"></div>
+                <div
+                    class="slider-fill green-fill"
+                    style="width: {g * 100}%"
+                ></div>
                 <div class="slider-thumb" style="left: {g * 100}%"></div>
             </div>
             <input
                 type="number"
                 step="0.01"
                 bind:value={g}
-                on:input={() => handleChannelChange('g', g)}
+                on:input={() => handleChannelChange("g", g)}
                 min="0"
                 max="1"
                 class="number-input"
@@ -140,14 +154,17 @@
                     class="slider blue-slider"
                 />
                 <div class="slider-track"></div>
-                <div class="slider-fill blue-fill" style="width: {b * 100}%"></div>
+                <div
+                    class="slider-fill blue-fill"
+                    style="width: {b * 100}%"
+                ></div>
                 <div class="slider-thumb" style="left: {b * 100}%"></div>
             </div>
             <input
                 type="number"
                 step="0.01"
                 bind:value={b}
-                on:input={() => handleChannelChange('b', b)}
+                on:input={() => handleChannelChange("b", b)}
                 min="0"
                 max="1"
                 class="number-input"
@@ -349,5 +366,4 @@
         align-items: center;
         justify-content: center;
     }
-
 </style>

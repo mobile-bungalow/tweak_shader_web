@@ -8,7 +8,7 @@
     export let _default: number = 0;
 
     const handleInput = () => {
-        const newValue = Number(value);
+        const newValue = Number(Number(value).toFixed(4));
         if (!isNaN(newValue)) {
             change(newValue);
         }
@@ -46,7 +46,7 @@
     <div class="input-container">
         <input
             type="number"
-            step="0.01"
+            step="0.001"
             bind:value
             on:input={handleInput}
             {min}

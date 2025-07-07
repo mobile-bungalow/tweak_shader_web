@@ -20,7 +20,15 @@
     import ImageInput from "../components/Image.svelte";
     import Button from "../components/Button.svelte";
     import Dropdown from "../components/Dropdown.svelte";
-    import { Play, Pause, RotateCcw, Save, Keyboard } from "lucide-svelte";
+
+    import {
+        Play,
+        Pause,
+        RotateCcw,
+        Save,
+        Keyboard,
+        Link2,
+    } from "lucide-svelte";
     let inputs: Map<String, any> = new Map();
     let canvas: HTMLCanvasElement;
     let tweakShader: TweakShader;
@@ -213,6 +221,114 @@
         vimMode = !vimMode;
     };
 
+    // Example shader management
+    const shaderExamples = [
+        { label: "Exit the Matrix", value: "/exit_the_matrix.glsl" },
+        { label: "Image Input", value: "/image_input.glsl" },
+        { label: "wiggler", value: "/wiggler.glsl" },
+        { label: "Compute Multipass", value: "/compute_multipass.glsl" },
+    ];
+
+    let selectedExample = shaderExamples[0];
+
+    const loadExample = async (example) => {
+        if (example) {
+            // Navigate to new page with file parameter
+            const url = `${window.location.origin}${window.location.pathname}?file=${encodeURIComponent(example)}`;
+            window.location.href = url;
+        } else {
+            // For default shader, navigate to clean URL
+            window.location.href = `${window.location.origin}${window.location.pathname}`;
+        }
+    };
+
+    // Save functionality
+    const saveToFile = () => {
+        const blob = new Blob([src], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "shader.glsl";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    // Base64 slug functionality
+    let linkButtonText = "Save link";
+    let linkButtonBlinking = false;
+
+    const saveAsSlug = () => {
+        // Check if current shader matches one of the static files
+        const matchingExample = shaderExamples.find((example) => {
+            // Compare current selection
+            return selectedExample && selectedExample.value === example.value;
+        });
+
+        let url;
+        if (matchingExample) {
+            // Use file parameter for static shaders
+            url = `${window.location.origin}${window.location.pathname}?file=${encodeURIComponent(matchingExample.value)}`;
+        } else {
+            // Fall back to base64 for custom shaders
+            const base64 = btoa(src);
+            url = `${window.location.origin}${window.location.pathname}?shader=${encodeURIComponent(base64)}`;
+        }
+
+        navigator.clipboard
+            .writeText(url)
+            .then(() => {
+                linkButtonText = "Copied!";
+                linkButtonBlinking = true;
+                setTimeout(() => {
+                    linkButtonText = "Save link";
+                    linkButtonBlinking = false;
+                }, 750);
+            })
+            .catch((err) => {
+                console.error("Failed to copy to clipboard:", err);
+                // Fallback: show the URL in a prompt
+                prompt("Copy this URL:", url);
+            });
+    };
+
+    // Load shader from URL on mount
+    onMount(async () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const fileParam = urlParams.get("file");
+        const shaderParam = urlParams.get("shader");
+
+        if (fileParam) {
+            // Load from static file
+            try {
+                const response = await fetch(`/static${fileParam}`);
+                const shaderCode = await response.text();
+                src = shaderCode;
+                // Find matching example
+                const matchingExample = shaderExamples.find(
+                    (example) => example.value === fileParam,
+                );
+                if (matchingExample) {
+                    selectedExample = matchingExample;
+                } else {
+                    selectedExample = { label: "Custom", value: null };
+                }
+            } catch (error) {
+                console.error("Failed to load shader from file:", error);
+            }
+        } else if (shaderParam) {
+            // Load from base64 (fallback for custom shaders)
+            try {
+                const decodedShader = atob(decodeURIComponent(shaderParam));
+                src = decodedShader;
+                selectedExample = { label: "Custom", value: null };
+            } catch (error) {
+                console.error("Failed to decode shader from URL:", error);
+            }
+        }
+    });
+
     // Auto-recompile when source changes
     let srcChangeTimeout: number;
     $: if (autoRecompile && src) {
@@ -279,19 +395,32 @@
                         {autoRecompile ? "Auto" : "Manual"}
                     </Button>
                 </div>
+                <div class="control-group">
+                    <label class="control-label">Example Shaders</label>
+                    <Dropdown
+                        options={shaderExamples}
+                        selected={selectedExample}
+                        onChange={loadExample}
+                        getLabel={(example) => example.label}
+                    />
+                </div>
             </div>
+
             <div class="inputs">
                 {#each Array.from(inputs) as [k, v]}
-                    <Input
-                        label={k.toString()}
-                        input={v}
-                        change={(val) => {
-                            tweakShader.set_input(k.toString(), val);
-                        }}
-                    ></Input>
+                    {#if v.type !== "Image"}
+                        <Input
+                            label={k.toString()}
+                            input={v}
+                            change={(val) => {
+                                tweakShader.set_input(k.toString(), val);
+                            }}
+                        ></Input>
+                    {/if}
                 {/each}
             </div>
         </div>
+
         <div class="right-column">
             <div class="editor">
                 <div class="code-editor-wrapper">
@@ -322,8 +451,20 @@
                             variant="secondary"
                             size="sm"
                             title="Save shader to file"
+                            onclick={saveToFile}
                         >
                             <Save size="14" /> Save
+                        </Button>
+
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            title="Save permalink"
+                            onclick={saveAsSlug}
+                            class={linkButtonBlinking ? "blink" : ""}
+                        >
+                            <Link2 size="14" />
+                            {linkButtonText}
                         </Button>
 
                         <Button
@@ -347,22 +488,25 @@
                 <div class="image-inputs">
                     {#each Array.from(inputs) as [k, v]}
                         {#if v.type == "Image"}
-                            <p>{k}</p>
-                            <ImageInput
-                                {...inputValueToProps(v)}
-                                change={(val) => {
-                                    if (val != undefined) {
-                                        tweakShader.load_texture(
-                                            k.toString(),
-                                            val,
-                                        );
-                                    } else {
-                                        tweakShader.remove_texture(
-                                            k.toString(),
-                                        );
-                                    }
-                                }}
-                            ></ImageInput>
+                            <div class="image-input-section">
+                                <h3 class="image-input-title">{k}</h3>
+                                <ImageInput
+                                    name={k.toString()}
+                                    {...inputValueToProps(v)}
+                                    change={(val) => {
+                                        if (val != undefined) {
+                                            tweakShader.load_texture(
+                                                k.toString(),
+                                                val,
+                                            );
+                                        } else {
+                                            tweakShader.remove_texture(
+                                                k.toString(),
+                                            );
+                                        }
+                                    }}
+                                ></ImageInput>
+                            </div>
                         {/if}
                     {/each}
                 </div>
@@ -391,6 +535,19 @@
 
     .code-editor-wrapper {
         max-width: 750px;
+        max-height: 600px;
+        overflow-y: auto;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+    }
+
+    :global(.code-editor-wrapper .cm-editor) {
+        max-height: 600px;
+    }
+
+    :global(.code-editor-wrapper .cm-scroller) {
+        max-height: 600px;
+        overflow-y: auto;
     }
 
     canvas {
@@ -467,6 +624,12 @@
         margin-top: 1rem;
     }
 
+    .shader-controls {
+        padding: 1rem 0;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 1rem;
+    }
+
     .editor-controls {
         padding: 1rem 0;
         border-top: 1px solid var(--border-color);
@@ -475,6 +638,23 @@
 
     .control-row {
         display: flex;
+        gap: 10px;
+    }
+
+    :global(.blink) {
+        animation: blink 0.5s ease-in-out 3;
+    }
+
+    @keyframes blink {
+        0%,
+        50%,
+        100% {
+            opacity: 1;
+        }
+        25%,
+        75% {
+            opacity: 0.3;
+        }
         gap: 0.75rem;
         flex-wrap: wrap;
     }
@@ -599,5 +779,27 @@
         border: 1px solid #666;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         pointer-events: none;
+    }
+
+    .image-inputs {
+        margin-top: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .image-input-section {
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+    }
+
+    .image-input-title {
+        margin: 0 0 1rem 0;
+        font-size: 1rem;
+        font-weight: 500;
+        color: var(--text-color);
+        text-transform: capitalize;
     }
 </style>
