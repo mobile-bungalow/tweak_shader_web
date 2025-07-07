@@ -18,6 +18,9 @@
     } from "@codemirror/lint";
     import Input from "../components/Input.svelte";
     import ImageInput from "../components/Image.svelte";
+    import Button from "../components/Button.svelte";
+    import Dropdown from "../components/Dropdown.svelte";
+    import { Play, Pause, RotateCcw, Save, Keyboard } from "lucide-svelte";
 
     let inputs: Map<String, any> = new Map();
     let canvas: HTMLCanvasElement;
@@ -100,7 +103,7 @@
         last = Date.now();
         const now = new Date();
 
-        tweakShader.update_resolution(canvas.width, canvas.height);
+        tweakShader.update_resolution(canvasWidth, canvasHeight);
         tweakShader.update_frame_count(frameCount);
         tweakShader.update_time(elapsed / 1000.0);
         tweakShader.update_datetime(
@@ -191,15 +194,112 @@
     };
 
     let paused = false;
+    let autoRecompile = true;
+    let canvasWidth = 800;
+    let canvasHeight = 450;
+    let aspectRatio = "16:9";
+    let resolution = "medium";
+
+    const getAspectRatioLabel = (ratio: string) => {
+        const multiplier = getResolutionMultiplier(resolution);
+        switch (ratio) {
+            case "16:9": return `16:9 (${Math.round(800 * multiplier)}×${Math.round(450 * multiplier)})`;
+            case "4:3": return `4:3 (${Math.round(600 * multiplier)}×${Math.round(450 * multiplier)})`;
+            case "1:1": return `1:1 (${Math.round(450 * multiplier)}×${Math.round(450 * multiplier)})`;
+            case "21:9": return `21:9 (${Math.round(1050 * multiplier)}×${Math.round(450 * multiplier)})`;
+            default: return ratio;
+        }
+    };
+
+    $: aspectRatios = [
+        { value: "16:9", label: getAspectRatioLabel("16:9") },
+        { value: "4:3", label: getAspectRatioLabel("4:3") },
+        { value: "1:1", label: getAspectRatioLabel("1:1") },
+        { value: "21:9", label: getAspectRatioLabel("21:9") }
+    ];
+
+    const resolutions = [
+        { value: "low", label: "Low" },
+        { value: "medium", label: "Medium" },
+        { value: "high", label: "High" }
+    ];
+
     const togglePause = () => {
         paused = !paused;
         if (!paused) requestAnimationFrame(draw);
+    };
+
+    const toggleAutoRecompile = () => {
+        autoRecompile = !autoRecompile;
+    };
+
+    const handleAspectRatioChange = (ratio: string) => {
+        aspectRatio = ratio;
+        updateCanvasSize();
+    };
+
+    const getResolutionMultiplier = (res: string) => {
+        switch (res) {
+            case "low": return 0.5;
+            case "medium": return 1;
+            case "high": return 1.5;
+            default: return 1;
+        }
+    };
+
+    const updateCanvasSize = async () => {
+        const multiplier = getResolutionMultiplier(resolution);
+        const baseHeight = 450;
+        
+        switch (aspectRatio) {
+            case "16:9":
+                canvasWidth = Math.round(800 * multiplier);
+                canvasHeight = Math.round(450 * multiplier);
+                break;
+            case "4:3":
+                canvasWidth = Math.round(600 * multiplier);
+                canvasHeight = Math.round(450 * multiplier);
+                break;
+            case "1:1":
+                canvasWidth = Math.round(450 * multiplier);
+                canvasHeight = Math.round(450 * multiplier);
+                break;
+            case "21:9":
+                canvasWidth = Math.round(1050 * multiplier);
+                canvasHeight = Math.round(450 * multiplier);
+                break;
+        }
+        
+        if (canvas && tweakShader) {
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            
+            // Just update the resolution without recreating everything
+            tweakShader.update_resolution(canvasWidth, canvasHeight);
+            draw();
+        }
+    };
+
+    const handleResolutionChange = (res: string) => {
+        resolution = res;
+        updateCanvasSize();
     };
 
     let vimMode = false;
     const toggleVim = () => {
         vimMode = !vimMode;
     };
+
+    // Auto-recompile when source changes
+    let srcChangeTimeout: number;
+    $: if (autoRecompile && src) {
+        clearTimeout(srcChangeTimeout);
+        srcChangeTimeout = setTimeout(() => {
+            if (tweakShader && !paused) {
+                recompile();
+            }
+        }, 500);
+    }
 </script>
 
 <main>
@@ -227,11 +327,47 @@
                 </div>
             {/if}
             <div class="controls">
-                <div class="stats"></div>
-                <button onclick={togglePause} aria-label="pause">Pause</button>
-                <button aria-label="aspect ratio">Aspect</button>
-                <button aria-label="select target">Target</button>
-                <div class="outputSelector"></div>
+                <div class="control-group">
+                    <label class="control-label">Playback</label>
+                    <Button 
+                        variant={paused ? "success" : "secondary"} 
+                        size="sm" 
+                        onclick={togglePause}
+                        title={paused ? "Resume animation" : "Pause animation"}
+                    >
+                        {#if paused}<Play size="14" />{:else}<Pause size="14" />{/if} {paused ? "Play" : "Pause"}
+                    </Button>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Aspect Ratio</label>
+                    <Dropdown 
+                        options={aspectRatios} 
+                        value={aspectRatio} 
+                        onChange={handleAspectRatioChange}
+                    />
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Resolution</label>
+                    <Dropdown 
+                        options={resolutions} 
+                        value={resolution} 
+                        onChange={handleResolutionChange}
+                    />
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Auto Recompile</label>
+                    <Button 
+                        variant={autoRecompile ? "primary" : "secondary"} 
+                        size="sm" 
+                        onclick={toggleAutoRecompile}
+                        title={autoRecompile ? "Disable auto-recompile" : "Enable auto-recompile"}
+                    >
+                        <RotateCcw size="14" /> {autoRecompile ? "Auto" : "Manual"}
+                    </Button>
+                </div>
             </div>
             <div class="inputs">
                 {#each Array.from(inputs) as [k, v]}
@@ -257,14 +393,36 @@
                         bind:value={src}
                     ></CodeMirror>
                 </div>
-                <div class="button-row"></div>
-                <button onclick={recompile} aria-label="recompile"
-                    >Recompile</button
-                >
-                <button aria-label="save">Save</button>
-                <button onclick={toggleVim} aria-label="vimKeybinds"
-                    >Vim Mode</button
-                >
+                <div class="editor-controls">
+                    <div class="control-row">
+                        <Button 
+                            variant="primary" 
+                            size="sm" 
+                            onclick={recompile}
+                            disabled={autoRecompile}
+                            title={autoRecompile ? "Auto-recompile is enabled" : "Manually recompile shader"}
+                        >
+                            <RotateCcw size="14" /> Recompile
+                        </Button>
+                        
+                        <Button 
+                            variant="secondary" 
+                            size="sm"
+                            title="Save shader to file"
+                        >
+                            <Save size="14" /> Save
+                        </Button>
+                        
+                        <Button 
+                            variant={vimMode ? "primary" : "secondary"} 
+                            size="sm" 
+                            onclick={toggleVim}
+                            title={vimMode ? "Disable Vim keybindings" : "Enable Vim keybindings"}
+                        >
+                            <Keyboard size="14" /> {vimMode ? "Vim: ON" : "Vim: OFF"}
+                        </Button>
+                    </div>
+                </div>
                 {#if generalError}
                     <div class="general-error">
                         {generalError}
@@ -358,6 +516,51 @@
 
     .right-column {
         flex: 1;
+    }
+
+    .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+
+    .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        min-width: 120px;
+    }
+
+    .control-label {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--text-color);
+        opacity: 0.8;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .inputs {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .editor-controls {
+        padding: 1rem 0;
+        border-top: 1px solid var(--border-color);
+        margin-top: 1rem;
+    }
+
+    .control-row {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
     }
 
     :global(.cm-selectionBackground) {
