@@ -403,6 +403,15 @@
                             bind:value={src}
                         ></CodeMirror>
                     {/key}
+                    <div class="error-banner">
+                        {#if compilationErrors.length > 0}
+                            <span class="error-count">{compilationErrors.length} error{compilationErrors.length !== 1 ? 's' : ''}</span>
+                        {:else if generalError}
+                            <span class="error-count">1 error</span>
+                        {:else}
+                            <span class="success-count">No errors</span>
+                        {/if}
+                    </div>
                 </div>
                 <div class="editor-controls">
                     <div class="control-row">
@@ -510,6 +519,28 @@
         overflow-y: auto;
         border: 1px solid var(--border-color);
         border-radius: 8px;
+        position: relative;
+    }
+
+    .error-banner {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        padding: 4px 8px;
+        background: rgba(0, 0, 0, 0.8);
+        border-top-left-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        backdrop-filter: blur(4px);
+        z-index: 10;
+    }
+
+    .error-count {
+        color: #ff6b6b;
+    }
+
+    .success-count {
+        color: #51cf66;
     }
 
     :global(.code-editor-wrapper .cm-editor) {
