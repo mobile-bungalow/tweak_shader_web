@@ -255,11 +255,11 @@
     let linkButtonBlinking = false;
 
     const saveAsSlug = () => {
-        const matchingExample = shaderExamples.find(example => 
-            selectedExample?.value === example.value
+        const matchingExample = shaderExamples.find(
+            (example) => selectedExample?.value === example.value,
         );
 
-        const url = matchingExample 
+        const url = matchingExample
             ? `${window.location.origin}${window.location.pathname}?file=${encodeURIComponent(matchingExample.value)}`
             : `${window.location.origin}${window.location.pathname}?shader=${encodeURIComponent(btoa(src))}`;
 
@@ -273,7 +273,7 @@
                     linkButtonBlinking = false;
                 }, 750);
             })
-            .catch(err => {
+            .catch((err) => {
                 console.error("Failed to copy to clipboard:", err);
                 prompt("Copy this URL:", url);
             });
@@ -286,11 +286,16 @@
 
         if (fileParam) {
             try {
-                const response = await fetch(`/static${fileParam}`);
+                const response = await fetch(`${fileParam}`);
                 const shaderCode = await response.text();
                 src = shaderCode;
-                const matchingExample = shaderExamples.find(example => example.value === fileParam);
-                selectedExample = matchingExample || { label: "Custom", value: null };
+                const matchingExample = shaderExamples.find(
+                    (example) => example.value === fileParam,
+                );
+                selectedExample = matchingExample || {
+                    label: "Custom",
+                    value: null,
+                };
             } catch (error) {
                 console.error("Failed to load shader from file:", error);
             }

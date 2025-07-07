@@ -1,23 +1,23 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
-    
+    import { onMount } from "svelte";
+
     export let change: (val?: ImageData) => void;
     export let name: string = "input_image";
-    
+
     let fileInput: HTMLInputElement;
     let imagePreview: string | null = null;
     let isDragging = false;
-    
+
     // Load placeholder image on mount
     onMount(() => {
         loadPlaceholderImage();
     });
-    
+
     const loadPlaceholderImage = () => {
         const img = new Image();
         img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
             if (ctx) {
                 canvas.width = img.width;
                 canvas.height = img.height;
@@ -26,49 +26,54 @@
                 change(imageData);
             }
         };
-        img.crossOrigin = 'anonymous';
-        img.src = '/static/wolfie.png';
+        img.crossOrigin = "anonymous";
+        img.src = "/wolfie.png";
     };
-    
+
     const handleFileSelect = (event: Event) => {
         const target = event.target as HTMLInputElement;
         if (target.files && target.files[0]) {
             processFile(target.files[0]);
         }
     };
-    
+
     const handleDrop = (event: DragEvent) => {
         event.preventDefault();
         isDragging = false;
-        
+
         if (event.dataTransfer?.files && event.dataTransfer.files[0]) {
             processFile(event.dataTransfer.files[0]);
         }
     };
-    
+
     const handleDragOver = (event: DragEvent) => {
         event.preventDefault();
         isDragging = true;
     };
-    
+
     const handleDragLeave = (event: DragEvent) => {
         event.preventDefault();
         isDragging = false;
     };
-    
+
     const processFile = (file: File) => {
         const reader = new FileReader();
         reader.onload = (e) => {
             imagePreview = e.target?.result as string;
             const img = new Image();
             img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
                 if (ctx) {
                     canvas.width = img.width;
                     canvas.height = img.height;
                     ctx.drawImage(img, 0, 0);
-                    const imageData = ctx.getImageData(0, 0, img.width, img.height);
+                    const imageData = ctx.getImageData(
+                        0,
+                        0,
+                        img.width,
+                        img.height,
+                    );
                     change(imageData);
                 }
             };
@@ -76,22 +81,22 @@
         };
         reader.readAsDataURL(file);
     };
-    
+
     const removeImage = () => {
         imagePreview = null;
         if (fileInput) {
-            fileInput.value = '';
+            fileInput.value = "";
         }
         loadPlaceholderImage();
     };
-    
+
     const openFileDialog = () => {
         fileInput.click();
     };
 </script>
 
 <div class="image-input">
-    <div 
+    <div
         class="image-preview {isDragging ? 'dragging' : ''}"
         on:drop={handleDrop}
         on:dragover={handleDragOver}
@@ -104,17 +109,21 @@
                 ×
             </button>
         {:else}
-            <img src="/static/wolfie.png" alt="Placeholder" class="placeholder-image" />
+            <img
+                src="/wolfie.png"
+                alt="Placeholder"
+                class="placeholder-image"
+            />
             <div class="upload-text">
                 <p>Click to upload or drag & drop</p>
                 <p class="file-types">PNG, JPG, GIF</p>
             </div>
         {/if}
     </div>
-    
-    <input 
-        type="file" 
-        accept="image/*" 
+
+    <input
+        type="file"
+        accept="image/*"
         bind:this={fileInput}
         on:change={handleFileSelect}
         class="file-input"
@@ -126,7 +135,7 @@
         width: 100%;
         max-width: 300px;
     }
-    
+
     .image-preview {
         position: relative;
         width: 100%;
@@ -142,24 +151,24 @@
         transition: all 0.2s ease;
         overflow: hidden;
     }
-    
+
     .image-preview:hover {
         border-color: var(--accent-color);
         background: rgba(255, 255, 255, 0.05);
     }
-    
+
     .image-preview.dragging {
         border-color: var(--accent-color);
         background: rgba(255, 255, 255, 0.08);
     }
-    
+
     .preview-image {
         width: 100%;
         height: 100%;
         object-fit: cover;
         border-radius: 6px;
     }
-    
+
     .placeholder-image {
         width: 80px;
         height: 80px;
@@ -167,24 +176,24 @@
         border-radius: 4px;
         margin-bottom: 0.5rem;
     }
-    
+
     .upload-text {
         text-align: center;
         color: var(--text-color);
         opacity: 0.8;
     }
-    
+
     .upload-text p {
         margin: 0;
         font-size: 0.875rem;
     }
-    
+
     .file-types {
         font-size: 0.75rem;
         opacity: 0.6;
         margin-top: 0.25rem;
     }
-    
+
     .remove-btn {
         position: absolute;
         top: 8px;
@@ -202,11 +211,11 @@
         justify-content: center;
         transition: background-color 0.2s ease;
     }
-    
+
     .remove-btn:hover {
         background: rgba(255, 0, 0, 0.7);
     }
-    
+
     .file-input {
         display: none;
     }
