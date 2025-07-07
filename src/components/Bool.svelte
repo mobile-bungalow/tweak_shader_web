@@ -1,5 +1,7 @@
 <script lang="ts">
-    export let value: boolean;
+    import { RotateCcw } from "lucide-svelte";
+
+    export let value: boolean = false;
     export let change: (val: boolean) => void;
     export let _default: boolean = false;
 
@@ -24,9 +26,11 @@
         <div class="toggle-track">
             <div class="toggle-thumb" class:active={value}></div>
         </div>
-        <span class="toggle-label">{value ? 'ON' : 'OFF'}</span>
+        <span class="toggle-label">{value ? "ON" : "OFF"}</span>
     </button>
-    <button on:click={reset} class="reset-btn" title="Reset to default">º</button>
+    <button on:click={reset} class="reset-btn" title="Reset to default">
+        <RotateCcw size="14" />
+    </button>
 </div>
 
 <style>

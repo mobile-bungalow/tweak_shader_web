@@ -42,6 +42,7 @@
     let generalError: string | null = null;
     let editorView: any = null;
     let needs_refresh = false;
+    let editorKey = 0;
 
     const shaderLinter = linter(
         (view) => {
@@ -79,6 +80,30 @@
     let last = Date.now();
 
     onMount(async () => {
+        // First, handle URL parameters to load shader before initializing
+        const urlParams = new URLSearchParams(window.location.search);
+        const fileParam = urlParams.get("file");
+        const shaderParam = urlParams.get("shader");
+
+        if (fileParam) {
+            try {
+                const response = await fetch(`${base}${fileParam}`);
+                const shaderCode = await response.text();
+                src = shaderCode;
+                editorKey++; // Force editor update
+            } catch (error) {
+                console.error("Failed to load shader from file:", error);
+            }
+        } else if (shaderParam) {
+            try {
+                src = atob(decodeURIComponent(shaderParam));
+                editorKey++; // Force editor update
+            } catch (error) {
+                console.error("Failed to decode shader from URL:", error);
+            }
+        }
+
+        // Then initialize with the loaded shader
         if (!navigator.gpu) {
             webgpuSupported = false;
             return;
@@ -100,6 +125,7 @@
 
         canvas.width = 800;
         canvas.height = 450;
+
         if (tweakShader) draw();
     });
 
@@ -154,16 +180,22 @@
                 }
                 from += col;
 
+                // Ensure positions are within document bounds
+                const maxPos = src.length;
+                from = Math.max(0, Math.min(from, maxPos - 1));
+                const to = Math.max(0, Math.min(from + 1, maxPos));
+
                 errors.push({
-                    from: Math.max(0, from),
-                    to: Math.max(0, from + 1),
+                    from,
+                    to,
                     severity: "error",
                     message,
                 });
             } else {
+                const maxPos = src.length;
                 errors.push({
-                    from: Math.max(0, src.length - 1),
-                    to: src.length,
+                    from: Math.max(0, maxPos - 1),
+                    to: maxPos,
                     severity: "error",
                     message: line.trim(),
                 });
@@ -229,8 +261,6 @@
         { label: "Compute Multipass", value: "/compute_multipass.glsl" },
     ];
 
-    let selectedExample = shaderExamples[0];
-
     const loadExample = async (example) => {
         if (example) {
             const url = `${window.location.origin}${base}/?file=${encodeURIComponent(example)}`;
@@ -274,41 +304,11 @@
             });
     };
 
-    onMount(async () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const fileParam = urlParams.get("file");
-        const shaderParam = urlParams.get("shader");
-
-        if (fileParam) {
-            try {
-                const response = await fetch(`${base}${fileParam}`);
-                const shaderCode = await response.text();
-                src = shaderCode;
-                const matchingExample = shaderExamples.find(
-                    (example) => example.value === fileParam,
-                );
-                selectedExample = matchingExample || {
-                    label: "Custom",
-                    value: null,
-                };
-            } catch (error) {
-                console.error("Failed to load shader from file:", error);
-            }
-        } else if (shaderParam) {
-            try {
-                src = atob(decodeURIComponent(shaderParam));
-                selectedExample = { label: "Custom", value: null };
-            } catch (error) {
-                console.error("Failed to decode shader from URL:", error);
-            }
-        }
-    });
-
     let srcChangeTimeout: number;
     $: if (autoRecompile && src) {
         clearTimeout(srcChangeTimeout);
         srcChangeTimeout = setTimeout(() => {
-            if (tweakShader && !paused) {
+            if (tweakShader) {
                 recompile();
             }
         }, 500);
@@ -371,12 +371,7 @@
                 </div>
                 <div class="control-group">
                     <label class="control-label">Example Shaders</label>
-                    <Dropdown
-                        options={shaderExamples}
-                        selected={selectedExample}
-                        onChange={loadExample}
-                        getLabel={(example) => example.label}
-                    />
+                    <Dropdown options={shaderExamples} onChange={loadExample} />
                 </div>
             </div>
 
@@ -398,14 +393,16 @@
         <div class="right-column">
             <div class="editor">
                 <div class="code-editor-wrapper">
-                    <CodeMirror
-                        class="codemirror"
-                        {theme}
-                        extensions={vimMode
-                            ? [vim(), glsl(), shaderLinter, lintGutter()]
-                            : [glsl(), shaderLinter, lintGutter()]}
-                        bind:value={src}
-                    ></CodeMirror>
+                    {#key editorKey}
+                        <CodeMirror
+                            class="codemirror"
+                            {theme}
+                            extensions={vimMode
+                                ? [vim(), glsl(), shaderLinter, lintGutter()]
+                                : [glsl(), shaderLinter, lintGutter()]}
+                            bind:value={src}
+                        ></CodeMirror>
+                    {/key}
                 </div>
                 <div class="editor-controls">
                     <div class="control-row">
