@@ -9,6 +9,7 @@ use util::WgpuContext;
 use wasm_bindgen::prelude::*;
 use web_sys::{HtmlCanvasElement, ImageData};
 
+
 // This is bad form, but we are in JS land. When in rome.
 const DATA_SURFACE_ID: &str = "data-surface-id";
 
@@ -38,13 +39,28 @@ impl TweakShader {
             ..
         } = ctx;
 
+        let context = RenderContext::new(
+            shader_source,
+            wgpu::TextureFormat::Rgba8Unorm,
+            &device,
+            &queue,
+        );
+
+        let context = match context {
+            Ok(context) => context,
+            Err(tweak_shader::Error::UniformError(e)) => {
+                return Err(JsError::new(&format!("Uniform error: {}", e)));
+            }
+            Err(tweak_shader::Error::ShaderCompilationFailed(e)) => {
+                return Err(JsError::new(&e));
+            }
+            Err(tweak_shader::Error::DocumentParsingFailed(e)) => {
+                return Err(JsError::new(&format!("Document parsing failed: {}", e)));
+            }
+        };
+
         Ok(Self {
-            context: RenderContext::new(
-                shader_source,
-                wgpu::TextureFormat::Rgba8Unorm,
-                &device,
-                &queue,
-            )?,
+            context,
             device: device.clone(),
             queue: queue.clone(),
             instance: instance.clone(),
@@ -57,12 +73,25 @@ impl TweakShader {
         shader_source: &str,
         wgpu_context: &WgpuContext,
     ) -> Result<(), JsError> {
-        let mut new_ctx = RenderContext::new(
+        let new_ctx = RenderContext::new(
             shader_source,
             wgpu::TextureFormat::Rgba8Unorm,
             &self.device,
             &self.queue,
-        )?;
+        );
+
+        let mut new_ctx = match new_ctx {
+            Ok(context) => context,
+            Err(tweak_shader::Error::UniformError(e)) => {
+                return Err(JsError::new(&format!("Uniform error: {}", e)));
+            }
+            Err(tweak_shader::Error::ShaderCompilationFailed(e)) => {
+                return Err(JsError::new(&e));
+            }
+            Err(tweak_shader::Error::DocumentParsingFailed(e)) => {
+                return Err(JsError::new(&format!("Document parsing failed: {}", e)));
+            }
+        };
         // well that's a confusing api...
         self.context
             .copy_resources_into(&mut new_ctx, &wgpu_context.device, &wgpu_context.queue);
