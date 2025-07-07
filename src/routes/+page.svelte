@@ -197,32 +197,7 @@
     let autoRecompile = true;
     let canvasWidth = 800;
     let canvasHeight = 450;
-    let aspectRatio = "16:9";
-    let resolution = "medium";
 
-    const getAspectRatioLabel = (ratio: string) => {
-        const multiplier = getResolutionMultiplier(resolution);
-        switch (ratio) {
-            case "16:9": return `16:9 (${Math.round(800 * multiplier)}×${Math.round(450 * multiplier)})`;
-            case "4:3": return `4:3 (${Math.round(600 * multiplier)}×${Math.round(450 * multiplier)})`;
-            case "1:1": return `1:1 (${Math.round(450 * multiplier)}×${Math.round(450 * multiplier)})`;
-            case "21:9": return `21:9 (${Math.round(1050 * multiplier)}×${Math.round(450 * multiplier)})`;
-            default: return ratio;
-        }
-    };
-
-    $: aspectRatios = [
-        { value: "16:9", label: getAspectRatioLabel("16:9") },
-        { value: "4:3", label: getAspectRatioLabel("4:3") },
-        { value: "1:1", label: getAspectRatioLabel("1:1") },
-        { value: "21:9", label: getAspectRatioLabel("21:9") }
-    ];
-
-    const resolutions = [
-        { value: "low", label: "Low" },
-        { value: "medium", label: "Medium" },
-        { value: "high", label: "High" }
-    ];
 
     const togglePause = () => {
         paused = !paused;
@@ -231,58 +206,6 @@
 
     const toggleAutoRecompile = () => {
         autoRecompile = !autoRecompile;
-    };
-
-    const handleAspectRatioChange = (ratio: string) => {
-        aspectRatio = ratio;
-        updateCanvasSize();
-    };
-
-    const getResolutionMultiplier = (res: string) => {
-        switch (res) {
-            case "low": return 0.5;
-            case "medium": return 1;
-            case "high": return 1.5;
-            default: return 1;
-        }
-    };
-
-    const updateCanvasSize = async () => {
-        const multiplier = getResolutionMultiplier(resolution);
-        const baseHeight = 450;
-        
-        switch (aspectRatio) {
-            case "16:9":
-                canvasWidth = Math.round(800 * multiplier);
-                canvasHeight = Math.round(450 * multiplier);
-                break;
-            case "4:3":
-                canvasWidth = Math.round(600 * multiplier);
-                canvasHeight = Math.round(450 * multiplier);
-                break;
-            case "1:1":
-                canvasWidth = Math.round(450 * multiplier);
-                canvasHeight = Math.round(450 * multiplier);
-                break;
-            case "21:9":
-                canvasWidth = Math.round(1050 * multiplier);
-                canvasHeight = Math.round(450 * multiplier);
-                break;
-        }
-        
-        if (canvas && tweakShader) {
-            canvas.width = canvasWidth;
-            canvas.height = canvasHeight;
-            
-            // Just update the resolution without recreating everything
-            tweakShader.update_resolution(canvasWidth, canvasHeight);
-            draw();
-        }
-    };
-
-    const handleResolutionChange = (res: string) => {
-        resolution = res;
-        updateCanvasSize();
     };
 
     let vimMode = false;
@@ -339,23 +262,6 @@
                     </Button>
                 </div>
 
-                <div class="control-group">
-                    <label class="control-label">Aspect Ratio</label>
-                    <Dropdown 
-                        options={aspectRatios} 
-                        value={aspectRatio} 
-                        onChange={handleAspectRatioChange}
-                    />
-                </div>
-
-                <div class="control-group">
-                    <label class="control-label">Resolution</label>
-                    <Dropdown 
-                        options={resolutions} 
-                        value={resolution} 
-                        onChange={handleResolutionChange}
-                    />
-                </div>
 
                 <div class="control-group">
                     <label class="control-label">Auto Recompile</label>

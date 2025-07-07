@@ -1,6 +1,6 @@
 <script lang="ts">
     import { RotateCcw } from "lucide-svelte";
-    
+
     export let value: number;
     export let change: (val: number) => void;
     export let min: number = 0;
@@ -45,7 +45,6 @@
     </div>
     <div class="input-container">
         <input
-            bind:this={inputElement}
             type="number"
             step="0.01"
             bind:value
@@ -157,5 +156,4 @@
         align-items: center;
         justify-content: center;
     }
-
 </style>
