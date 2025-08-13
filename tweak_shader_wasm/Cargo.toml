@@ -8,7 +8,7 @@ crate-type = ["cdylib"]
 
 
 [dependencies]
-tweak_shader = { git = "https://github.com/mobile-bungalow/tweak_shader" }
+tweak_shader = { git = "https://github.com/mobile-bungalow/tweak_shader", branch = "main" }
 web-sys = { version = "0.3.77", features = [
     "HtmlCanvasElement",
     "ImageData",

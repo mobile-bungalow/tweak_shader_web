@@ -233,9 +233,9 @@
         return true;
     };
 
-    const initializeShader = () => {
+    const initializeShader = async () => {
         try {
-            tweakShader = new TweakShader(src, context);
+            tweakShader = await new TweakShader(src, context);
             inputs = tweakShader.get_input_list();
             compilationErrors = [];
             generalError = null;
@@ -257,7 +257,7 @@
         const webgpuReady = await initializeWebGPU();
         if (!webgpuReady) return;
 
-        initializeShader();
+        await initializeShader();
         setupCanvas();
     });
 
@@ -297,15 +297,27 @@
 
         const actualLineNum = reportedLineNum + pragmaCount;
         let from = 0;
-        for (let i = 0; i < actualLineNum && i < srcLines.length; i++) {
-            from += srcLines[i].length + 1;
+        
+        // Calculate position more carefully to avoid out-of-bounds
+        for (let i = 0; i < Math.min(actualLineNum, srcLines.length); i++) {
+            from += srcLines[i].length + 1; // +1 for newline
         }
-        from += col;
+        
+        // Clamp column to line length if we have a valid line
+        if (actualLineNum < srcLines.length && col >= 0) {
+            const lineLength = srcLines[actualLineNum].length;
+            from += Math.min(col, lineLength);
+        } else if (col >= 0) {
+            from += col;
+        }
 
         const maxPos = src.length;
+        const safeFrom = Math.max(0, Math.min(from, maxPos));
+        const safeTo = Math.max(0, Math.min(from + 1, maxPos));
+        
         return {
-            from: Math.max(0, Math.min(from, maxPos - 1)),
-            to: Math.max(0, Math.min(from + 1, maxPos)),
+            from: safeFrom,
+            to: Math.max(safeFrom, safeTo),
         };
     };
 
@@ -329,10 +341,12 @@
     };
 
     const parseGeneralError = (line: string): Diagnostic => {
-        const maxPos = src.length;
+        const maxPos = Math.max(1, src.length);
+        const safeFrom = Math.max(0, maxPos - 1);
+        const safeTo = maxPos;
         return {
-            from: Math.max(0, maxPos - 1),
-            to: maxPos,
+            from: safeFrom,
+            to: safeTo,
             severity: "error",
             message: line.trim(),
         };
@@ -371,14 +385,14 @@
         updateLinter();
     };
 
-    const recompile = () => {
+    const recompile = async () => {
         frameCount = 0;
         start = Date.now();
 
         try {
             compilationErrors = [];
             generalError = null;
-            tweakShader.update_src(src, context);
+            await tweakShader.update_src(src, context);
             inputs = tweakShader.get_input_list();
             updateLinter();
             if (tweakShader && canvas) draw();
@@ -464,9 +478,9 @@
     let srcChangeTimeout: number;
     $: if (autoRecompile && src) {
         clearTimeout(srcChangeTimeout);
-        srcChangeTimeout = setTimeout(() => {
+        srcChangeTimeout = setTimeout(async () => {
             if (tweakShader) {
-                recompile();
+                await recompile();
             }
         }, 500);
     }
@@ -608,7 +622,7 @@
                         <Button
                             variant="primary"
                             size="sm"
-                            onclick={recompile}
+                            onclick={() => recompile()}
                             disabled={autoRecompile}
                             title={autoRecompile
                                 ? "Auto-recompile is enabled"

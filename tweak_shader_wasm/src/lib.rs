@@ -9,7 +9,6 @@ use util::WgpuContext;
 use wasm_bindgen::prelude::*;
 use web_sys::{HtmlCanvasElement, ImageData};
 
-
 // This is bad form, but we are in JS land. When in rome.
 const DATA_SURFACE_ID: &str = "data-surface-id";
 
@@ -31,13 +30,16 @@ pub async fn initialize_library() -> WgpuContext {
 impl TweakShader {
     /// Create a new TweakShader instance with a shader source and output format
     #[wasm_bindgen(constructor)]
-    pub fn new(shader_source: String, ctx: &WgpuContext) -> Result<TweakShader, JsError> {
+    pub async fn new(shader_source: String, ctx: &WgpuContext) -> Result<TweakShader, JsError> {
         let WgpuContext {
             device,
             queue,
             instance,
             ..
         } = ctx;
+
+        // Push error scope to catch WebGPU validation errors
+        device.push_error_scope(wgpu::ErrorFilter::Validation);
 
         let context = RenderContext::new(
             shader_source,
@@ -59,6 +61,10 @@ impl TweakShader {
             }
         };
 
+        if let Some(_error) = device.pop_error_scope().await {
+            return Err(JsError::new("Shader validation error - check your shader syntax and grammar"));
+        }
+
         Ok(Self {
             context,
             device: device.clone(),
@@ -68,11 +74,14 @@ impl TweakShader {
         })
     }
 
-    pub fn update_src(
+    pub async fn update_src(
         &mut self,
         shader_source: &str,
         wgpu_context: &WgpuContext,
     ) -> Result<(), JsError> {
+        // Push error scope to catch WebGPU validation errors
+        self.device.push_error_scope(wgpu::ErrorFilter::Validation);
+
         let new_ctx = RenderContext::new(
             shader_source,
             wgpu::TextureFormat::Rgba8Unorm,
@@ -92,6 +101,11 @@ impl TweakShader {
                 return Err(JsError::new(&e.to_string()));
             }
         };
+
+        if let Some(_error) = self.device.pop_error_scope().await {
+            return Err(JsError::new("Shader validation error - check your shader syntax and grammar"));
+        }
+
         // well that's a confusing api...
         self.context
             .copy_resources_into(&mut new_ctx, &wgpu_context.device, &wgpu_context.queue);

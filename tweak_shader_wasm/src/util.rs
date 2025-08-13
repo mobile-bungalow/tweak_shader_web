@@ -39,18 +39,18 @@ pub async fn set_up_wgpu() -> WgpuContext {
 
     device.on_uncaptured_error(Box::new(|e| match e {
         wgpu::Error::OutOfMemory { .. } => {
-            panic!("Out Of GPU Memory! bailing");
+            log("GPU Out of Memory error occurred");
         }
         wgpu::Error::Validation {
             description,
             source,
         } => {
-            panic!("{description} : {source}");
+            log(&format!("GPU Validation error: {description} : {source}"));
         }
         wgpu::Error::Internal {
             source,
             description,
-        } => panic!("internal error! {description} : {source}"),
+        } => log(&format!("GPU Internal error: {description} : {source}")),
     }));
 
     WgpuContext {
