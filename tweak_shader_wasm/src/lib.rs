@@ -7,7 +7,7 @@ use external::JsInputValue;
 use tweak_shader::{RenderContext, TextureDesc, input_type::InputVariant, wgpu};
 use util::WgpuContext;
 use wasm_bindgen::prelude::*;
-use web_sys::{HtmlCanvasElement, ImageData};
+use web_sys::{HtmlCanvasElement, ImageData, console::warn_1};
 
 // This is bad form, but we are in JS land. When in rome.
 const DATA_SURFACE_ID: &str = "data-surface-id";
@@ -61,8 +61,11 @@ impl TweakShader {
             }
         };
 
-        if let Some(_error) = device.pop_error_scope().await {
-            return Err(JsError::new("Shader validation error - check your shader syntax and grammar"));
+        if let Some(error) = device.pop_error_scope().await {
+            warn_1(&format!("{}", error).into());
+            return Err(JsError::new(
+                "Shader validation error - check for syntax and uniformity errors",
+            ));
         }
 
         Ok(Self {
@@ -102,8 +105,11 @@ impl TweakShader {
             }
         };
 
-        if let Some(_error) = self.device.pop_error_scope().await {
-            return Err(JsError::new("Shader validation error - check your shader syntax and grammar"));
+        if let Some(error) = self.device.pop_error_scope().await {
+            warn_1(&format!("Validation Error: \n{}", error).into());
+            return Err(JsError::new(
+                "Shader validation error - check your shader syntax then check the logs",
+            ));
         }
 
         // well that's a confusing api...
